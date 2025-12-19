@@ -13,6 +13,7 @@
 #define FIX_SEQ_254
 #define CHAR_SELECT_STATS_IMPROVEMENT	// Improve stats values in character select screen
 #define __ENABLE_STEALTH_FIX__
+#define __BL_LEVEL_FIX__
 
 // Python-only
 #define FIX_HORSE_SKILLS_TAB
