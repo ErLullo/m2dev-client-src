@@ -620,19 +620,21 @@ void CActorInstance::__ProcessDataAttackSuccess(const NRaceData::TAttackData & c
 		// VICTIM_COLLISION_TEST_END
 	}
 
+	// MR-3: Shaman on-mount hitting fix
 	// Invisible Time
 	if (IS_PARTY_HUNTING_RACE(rVictim.GetRace()))
 	{
 		if (uiSkill) // 파티 사냥 몬스터라도 스킬이면 무적시간 적용
-			rVictim.m_fInvisibleTime = CTimer::Instance().GetCurrentSecond() + c_rAttackData.fInvisibleTime;
+			rVictim.m_fInvisibleTime = CTimer::Instance().GetCurrentSecond() + (c_rAttackData.fInvisibleTime - __GetInvisibleTimeAdjust(uiSkill, c_rAttackData));
 
 		if (m_isMain) // #0000794: [M2KR] 폴리모프 - 밸런싱 문제 타인 공격에 의한 무적 타임은 고려하지 않고 자신 공격에 의한것만 체크한다
-			rVictim.m_fInvisibleTime = CTimer::Instance().GetCurrentSecond() + c_rAttackData.fInvisibleTime;
+			rVictim.m_fInvisibleTime = CTimer::Instance().GetCurrentSecond() + (c_rAttackData.fInvisibleTime - __GetInvisibleTimeAdjust(uiSkill, c_rAttackData));
 	}
 	else // 파티 사냥 몬스터가 아닐 경우만 적용
 	{
-		rVictim.m_fInvisibleTime = CTimer::Instance().GetCurrentSecond() + c_rAttackData.fInvisibleTime;
+		rVictim.m_fInvisibleTime = CTimer::Instance().GetCurrentSecond() + (c_rAttackData.fInvisibleTime - __GetInvisibleTimeAdjust(uiSkill, c_rAttackData));
 	}
+	// MR-3: -- END OF -- Shaman on-mount hitting fix
 		
 	// Stiffen Time
 	rVictim.InsertDelay(c_rAttackData.fStiffenTime);
@@ -964,3 +966,19 @@ void CActorInstance::__SetFallingDirection(float fx, float fy)
 {
 	m_PhysicsObject.SetDirection(D3DXVECTOR3(fx, fy, 0.0f));
 }
+
+// MR-3: Shaman on-mount hitting fix
+float CActorInstance::__GetInvisibleTimeAdjust(const UINT uiSkill, const NRaceData::TAttackData& c_rAttackData) {
+
+	static const int shamanw = 3, shamanm = 7;
+
+	if ((GetRace() != shamanw && GetRace() != shamanm) ||
+		uiSkill != 0 ||
+		m_fAtkSpd < 1.3)
+		return 0.0f;
+
+	const auto scale = (m_fAtkSpd - 1.3) / 1.3;
+	const auto inv = c_rAttackData.fInvisibleTime * 0.5;
+	return inv * scale;
+}
+// MR-3: -- END OF -- Shaman on-mount hitting fix

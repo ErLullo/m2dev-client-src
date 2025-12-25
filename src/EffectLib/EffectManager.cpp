@@ -484,15 +484,18 @@ DWORD CEffectManager::GetSelectedEffectDataCRC() const
 		return 0;
 
 	CEffectData* pData = m_pSelectedEffectInstance->GetEffectDataPointer();
+	
 	if (!pData)
 		return 0;
 
 	const char* cszFile = pData->GetFileName();
+
 	if (!cszFile || !cszFile[0])
 		return 0;
 
 	std::string str;
 	StringPath(cszFile, str);
+
 	return GetCaseCRC32(str.c_str(), (int)str.length());
 }
 

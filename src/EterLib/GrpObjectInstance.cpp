@@ -285,9 +285,7 @@ void CGraphicObjectInstance::Initialize()
 	m_isVisible = TRUE;	
 
 	m_BlockCamera = false;
-
 	m_isAlwaysHidden = false;
-
 	
 	m_v3Position.x = m_v3Position.y = m_v3Position.z = 0.0f;
 	m_v3Scale.x = m_v3Scale.y = m_v3Scale.z = 1.0f;

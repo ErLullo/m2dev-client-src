@@ -1978,9 +1978,10 @@ void CInstanceBase::Render()
 
 		if (pkInstEach)
 		{
+			// MR-3: Invisibility fix
 			if (pkInstEach->IsAffect(AFFECT_INVISIBILITY) || pkInstEach->IsAffect(AFFECT_EUNHYEONG) || pkInstEach->IsAffect(AFFECT_REVIVE_INVISIBILITY))
 			{
-				if (CPythonPlayer::Instance().IsMainCharacterIndex(pkInstEach->GetVirtualID()))
+				if (CPythonPlayer::Instance().IsMainCharacterIndex(pkInstEach->GetVirtualID()) && !pkInstEach->IsAffect(AFFECT_INVISIBILITY))
 					continue;
 
 				if (pkInstEach->IsAffect(AFFECT_EUNHYEONG) && !pkInstEach->IsAffect(AFFECT_INVISIBILITY) && !pkInstEach->IsAffect(AFFECT_REVIVE_INVISIBILITY))
@@ -1988,6 +1989,11 @@ void CInstanceBase::Render()
 				else
 					pkInstEach->m_GraphicThingInstance.HideAllAttachingEffect();
 			}
+			else
+			{
+				pkInstEach->m_GraphicThingInstance.ShowAllAttachingEffect();
+			}
+			// MR-3: -- END OF -- Invisibility fix
 		}
 	}
 	

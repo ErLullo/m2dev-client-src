@@ -362,6 +362,7 @@ class CActorInstance : public IActorInstance, public IFlyTargetableObject
 		BOOL		IsActEmotion();
 		DWORD		GetComboIndex();
 		float		GetAttackingElapsedTime();
+
 		void		SetBlendingPosition(const TPixelPosition & c_rPosition, float fBlendingTime = 1.0f);
 		void		ResetBlendingPosition();
 		void		GetBlendingPosition(TPixelPosition * pPosition);
@@ -607,6 +608,9 @@ class CActorInstance : public IActorInstance, public IFlyTargetableObject
 		void __ProcessMotionEventAttackSuccess(DWORD dwMotionKey, BYTE byEventIndex, CActorInstance & rVictim);
 		void __ProcessMotionAttackSuccess(DWORD dwMotionKey, CActorInstance & rVictim);
 
+		// MR-3: Shaman on-mount hitting fix
+		float __GetInvisibleTimeAdjust(const UINT uiSkill, const NRaceData::TAttackData& c_rAttackData);
+		// MR-3: -- END OF -- Shaman on-mount hitting fix
 
 		void __HitStone(CActorInstance& rVictim);
 		void __HitGood(CActorInstance& rVictim);

@@ -1662,18 +1662,36 @@ PyObject * skillGetSkillAffectDescription(PyObject * poSelf, PyObject * poArgs)
 PyObject * skillGetSkillCoolTime(PyObject * poSelf, PyObject * poArgs)
 {
 	int iSkillIndex;
+
 	if (!PyTuple_GetInteger(poArgs, 0, &iSkillIndex))
 		return Py_BadArgument();
 
 	float fSkillPoint;
+
 	if (!PyTuple_GetFloat(poArgs, 1, &fSkillPoint))
 		return Py_BadArgument();
 
 	CPythonSkill::SSkillData * c_pSkillData;
+
 	if (!CPythonSkill::Instance().GetSkillData(iSkillIndex, &c_pSkillData))
 		return Py_BuildException("skill.GetSkillCoolTime - Failed to find skill by %d", iSkillIndex);
 
-	return Py_BuildValue("i", c_pSkillData->GetSkillCoolTime(fSkillPoint));
+	// MR-3: Calculate casting speed bonus on skill cool time
+	DWORD dwSkillCoolTime = c_pSkillData->GetSkillCoolTime(fSkillPoint);
+	int iCastingSpeed = CPythonPlayer::Instance().GetStatus(POINT_CASTING_SPEED);
+
+	int iSpd = 100 - iCastingSpeed;
+	if (iSpd > 0)
+		iSpd = 100 + iSpd;
+	else if (iSpd < 0)
+		iSpd = 10000 / (100 - iSpd);
+	else
+		iSpd = 100;
+
+	dwSkillCoolTime = dwSkillCoolTime * iSpd / 100;
+
+	return Py_BuildValue("i", dwSkillCoolTime);
+	// MR-3: -- END OF -- Calculate casting speed bonus on skill cool time
 }
 
 PyObject * skillGetSkillNeedSP(PyObject * poSelf, PyObject * poArgs)

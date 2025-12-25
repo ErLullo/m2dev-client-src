@@ -60,7 +60,6 @@ class CGraphicObjectInstance : public CGraphicCollisionObject
 		void					ApplyAlwaysHidden();
 		void					ReleaseAlwaysHidden();
 
-
 		// Camera Block
 		void					BlockCamera(bool bBlock) {m_BlockCamera = bBlock;}
 		bool					BlockCamera() { return m_BlockCamera; }
