@@ -2322,6 +2322,21 @@ bool CPythonNetworkStream::SendQuestConfirmPacket(BYTE byAnswer, DWORD dwPID)
 	return SendSequence();
 }
 
+bool CPythonNetworkStream::SendQuestCancelPacket()
+{
+	TPacketCGQuestCancel Packet;
+	Packet.header = HEADER_CG_QUEST_CANCEL;
+
+	if (!Send(sizeof(Packet), &Packet))
+	{
+		Tracen("SendQuestCancelPacket Error");
+		return false;
+	}
+
+	Tracenf(" SendQuestCancelPacket");
+	return SendSequence();
+}
+
 bool CPythonNetworkStream::RecvSkillCoolTimeEnd()
 {
 	TPacketGCSkillCoolTimeEnd kPacketSkillCoolTimeEnd;

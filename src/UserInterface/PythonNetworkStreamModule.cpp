@@ -1319,6 +1319,14 @@ PyObject* netSendQuestConfirmPacket(PyObject* poSelf, PyObject* poArgs)
 	return Py_BuildNone();
 }
 
+PyObject* netSendQuestCancelPacket(PyObject* poSelf, PyObject* poArgs)
+{
+	CPythonNetworkStream& rns=CPythonNetworkStream::Instance();
+	rns.SendQuestCancelPacket();
+
+	return Py_BuildNone();
+}
+
 PyObject* netSendGuildAddMemberPacket(PyObject* poSelf, PyObject* poArgs)
 {
 	int iVID;
@@ -1801,6 +1809,7 @@ void initnet()
 		{ "SendAnswerMakeGuildPacket",				netSendAnswerMakeGuildPacket,				METH_VARARGS },
 		{ "SendQuestInputStringPacket",				netSendQuestInputStringPacket,				METH_VARARGS },
 		{ "SendQuestConfirmPacket",					netSendQuestConfirmPacket,					METH_VARARGS },
+		{ "SendQuestCancelPacket",					netSendQuestCancelPacket,					METH_VARARGS },
 		{ "SendGuildAddMemberPacket",				netSendGuildAddMemberPacket,				METH_VARARGS },
 		{ "SendGuildRemoveMemberPacket",			netSendGuildRemoveMemberPacket,				METH_VARARGS },
 		{ "SendGuildChangeGradeNamePacket",			netSendGuildChangeGradeNamePacket,			METH_VARARGS },

@@ -182,6 +182,7 @@ class CPythonNetworkStream : public CNetworkStream, public CSingleton<CPythonNet
 		bool SendAnswerMakeGuildPacket(const char * c_szName);
 		bool SendQuestInputStringPacket(const char * c_szString);
 		bool SendQuestConfirmPacket(BYTE byAnswer, DWORD dwPID);
+		bool SendQuestCancelPacket();
 
 		// Event
 		bool SendOnClickPacket(DWORD vid);

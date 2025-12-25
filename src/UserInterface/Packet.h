@@ -41,7 +41,7 @@ enum
     HEADER_CG_SCRIPT_ANSWER						= 29,
 	HEADER_CG_QUEST_INPUT_STRING				= 30,
     HEADER_CG_QUEST_CONFIRM                     = 31,
-	//HEADER_BLANK32								= 32,
+	HEADER_CG_QUEST_CANCEL						= 32,
 	//HEADER_BLANK33								= 33,
 	//HEADER_BLANK34								= 34,
 	//HEADER_BLANK35								= 35,
@@ -1015,6 +1015,11 @@ typedef struct command_quest_confirm
     uint8_t answer;
     uint32_t requestPID;
 } TPacketCGQuestConfirm;
+
+typedef struct command_quest_cancel
+{
+    uint8_t header;
+} TPacketCGQuestCancel;
 
 typedef struct command_script_select_item
 {
