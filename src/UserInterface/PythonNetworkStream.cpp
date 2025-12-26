@@ -878,6 +878,10 @@ CPythonNetworkStream::CPythonNetworkStream()
 
 	memset(m_akSimplePlayerInfo, 0, sizeof(m_akSimplePlayerInfo));
 
+	// Increase network buffer sizes for better throughput
+	SetRecvBufferSize(65536);  // 64KB recv buffer
+	SetSendBufferSize(65536);  // 64KB send buffer
+
 	m_phaseProcessFunc.Clear();
 
 	m_dwEmpireID = 0;
