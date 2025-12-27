@@ -831,6 +831,10 @@ void CMapOutdoor::__ClearGarvage()
 
 void CMapOutdoor::__UpdateGarvage()
 {
+	// Early exit if no garbage to collect - saves CPU cycles
+	if (m_TerrainDeleteVector.empty() && m_AreaDeleteVector.empty())
+		return;
+
 	const DWORD dwTerrainEraseInterval = 1000 * 60;
 	static DWORD dwEraseTime = ELTimer_GetMSec();
 	
