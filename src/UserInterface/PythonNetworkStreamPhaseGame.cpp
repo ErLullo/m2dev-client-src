@@ -2006,6 +2006,7 @@ bool CPythonNetworkStream::RecvQuestInfoPacket()
 	if (QUEST_PACKET_TYPE_END == byQuestPacketType)
 	{
 		rkQuest.DeleteQuestInstance(QuestInfo.index);
+		PyCallClassMemberFunc(m_apoPhaseWnd[PHASE_WINDOW_GAME], "BINARY_ClearQuest", Py_BuildValue("(i)", QuestInfo.index));
 	}
 	else if (QUEST_PACKET_TYPE_UPDATE == byQuestPacketType)
 	{
