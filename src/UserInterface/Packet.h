@@ -298,6 +298,8 @@ enum
 	HEADER_GC_DRAGON_SOUL_REFINE						= 209,
 	HEADER_GC_RESPOND_CHANNELSTATUS				= 210,
 
+	HEADER_GC_ITEM_GET							= 211,
+
 	HEADER_GC_KEY_AGREEMENT_COMPLETED			= 0xfa, // _IMPROVED_PACKET_ENCRYPTION_
 	HEADER_GC_KEY_AGREEMENT						= 0xfb, // _IMPROVED_PACKET_ENCRYPTION_
 	HEADER_GC_HANDSHAKE_OK						= 0xfc, // 252
@@ -1629,6 +1631,15 @@ typedef struct packet_set_item
 	int32_t					alSockets[ITEM_SOCKET_SLOT_MAX_NUM];
     TPlayerItemAttribute	aAttr[ITEM_ATTRIBUTE_SLOT_MAX_NUM];
 } TPacketGCItemSet;
+
+typedef struct packet_item_get
+{
+	uint8_t		header;
+	uint32_t	dwItemVnum;
+	uint8_t		bCount;
+	uint8_t		bArg;		// 0: normal, 1: from party member
+	char		szFromName[CHARACTER_NAME_MAX_LEN + 1];
+} TPacketGCItemGet;
 
 typedef struct packet_use_item
 {

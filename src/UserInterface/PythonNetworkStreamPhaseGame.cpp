@@ -320,6 +320,10 @@ void CPythonNetworkStream::GamePhase()
 				ret = RecvItemSetPacket();
 				break;
 
+			case HEADER_GC_ITEM_GET:
+				ret = RecvItemGetPacket();
+				break;
+
 			case HEADER_GC_ITEM_USE:
 				ret = RecvItemUsePacket();
 				break;
@@ -1293,6 +1297,111 @@ void CPythonNetworkStream::__ConvertEmpireText(DWORD dwEmpireID, char* szText)
 	}
 }
 
+void CPythonNetworkStream::__LocalizeItemLinks(char* buf, size_t bufSize)
+{
+	// Replace item names in hyperlinks with client-side localized names
+	// Format: |Hitem:VNUM:flags:socket0:socket1:socket2...|h[ItemName]|h
+
+	// Early exit: skip processing if no item links exist
+	if (!strstr(buf, "|Hitem:"))
+		return;
+
+	char* pSearch = buf;
+	char result[2048];
+	char* pResult = result;
+	char* pResultEnd = result + sizeof(result) - 1;
+
+	while (*pSearch && pResult < pResultEnd)
+	{
+		// Look for |Hitem:
+		if (strncmp(pSearch, "|Hitem:", 7) == 0)
+		{
+			char* pLinkStart = pSearch;
+			pSearch += 7;
+
+			// Extract vnum (first hex value after "item:")
+			DWORD dwVnum = 0;
+			while (*pSearch && *pSearch != ':' && *pSearch != '|')
+			{
+				if (*pSearch >= '0' && *pSearch <= '9')
+					dwVnum = dwVnum * 16 + (*pSearch - '0');
+				else if (*pSearch >= 'a' && *pSearch <= 'f')
+					dwVnum = dwVnum * 16 + (*pSearch - 'a' + 10);
+				else if (*pSearch >= 'A' && *pSearch <= 'F')
+					dwVnum = dwVnum * 16 + (*pSearch - 'A' + 10);
+				pSearch++;
+			}
+
+			// Find |h[ which marks the start of the item name
+			char* pNameStart = strstr(pSearch, "|h[");
+			if (pNameStart)
+			{
+				pNameStart += 3; // Skip "|h["
+
+				// Find ]|h which marks the end of the item name
+				char* pNameEnd = strstr(pNameStart, "]|h");
+				if (pNameEnd)
+				{
+					// Get the client-side item name
+					CItemData* pItemData;
+					const char* szLocalName = NULL;
+					if (CItemManager::Instance().GetItemDataPointer(dwVnum, &pItemData))
+						szLocalName = pItemData->GetName();
+
+					// Copy everything from link start to |h[
+					size_t copyLen = pNameStart - pLinkStart;
+					if (pResult + copyLen < pResultEnd)
+					{
+						memcpy(pResult, pLinkStart, copyLen);
+						pResult += copyLen;
+					}
+
+					// Insert the localized name (or original if not found)
+					const char* szName = szLocalName ? szLocalName : pNameStart;
+					size_t nameLen = szLocalName ? strlen(szLocalName) : (pNameEnd - pNameStart);
+					if (pResult + nameLen < pResultEnd)
+					{
+						if (szLocalName)
+						{
+							memcpy(pResult, szLocalName, nameLen);
+						}
+						else
+						{
+							memcpy(pResult, pNameStart, nameLen);
+						}
+						pResult += nameLen;
+					}
+
+					// Copy ]|h
+					if (pResult + 3 < pResultEnd)
+					{
+						memcpy(pResult, "]|h", 3);
+						pResult += 3;
+					}
+
+					pSearch = pNameEnd + 3; // Skip past ]|h
+					continue;
+				}
+			}
+
+			// If we couldn't parse properly, just copy the character and continue
+			if (pResult < pResultEnd)
+				*pResult++ = *pLinkStart;
+			pSearch = pLinkStart + 1;
+		}
+		else
+		{
+			if (pResult < pResultEnd)
+				*pResult++ = *pSearch;
+			pSearch++;
+		}
+	}
+	*pResult = '\0';
+
+	strncpy(buf, result, bufSize - 1);
+	buf[bufSize - 1] = '\0';
+}
+
 bool CPythonNetworkStream::RecvChatPacket()
 {
 	TPacketGCChat kChat;
@@ -1308,6 +1417,9 @@ bool CPythonNetworkStream::RecvChatPacket()
 		return false;
 
 	buf[uChatSize]='\0';
+
+	// Localize item names in hyperlinks for multi-language support
+	__LocalizeItemLinks(buf, sizeof(buf));
 
 	if (kChat.type >= CHAT_TYPE_MAX_NUM)
 		return true;
