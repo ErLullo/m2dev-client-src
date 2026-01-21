@@ -7,6 +7,7 @@
 #include "PythonCharacterManager.h"
 
 #include "AbstractPlayer.h"
+#include "GameLib/ItemManager.h"
 
 //////////////////////////////////////////////////////////////////////////
 // SafeBox
@@ -254,6 +255,40 @@ bool CPythonNetworkStream::RecvItemSetPacket()
 	return true;
 }
 
+bool CPythonNetworkStream::RecvItemGetPacket()
+{
+	TPacketGCItemGet packet;
+	if (!Recv(sizeof(TPacketGCItemGet), &packet))
+		return false;
+
+	CItemData* pItemData;
+	if (!CItemManager::Instance().GetItemDataPointer(packet.dwItemVnum, &pItemData))
+	{
+		TraceError("CPythonNetworkStream::RecvItemGetPacket - Unknown item vnum %u", packet.dwItemVnum);
+		return true;
+	}
+
+	if (packet.bArg == 0)
+	{
+		// Normal pickup
+		PyCallClassMemberFunc(m_apoPhaseWnd[PHASE_WINDOW_GAME], "BINARY_ItemGet",
+			Py_BuildValue("(si)", pItemData->GetName(), packet.bCount));
+	}
+	else if (packet.bArg == 1)
+	{
+		// Received from party member
+		PyCallClassMemberFunc(m_apoPhaseWnd[PHASE_WINDOW_GAME], "BINARY_ItemGetFromParty",
+			Py_BuildValue("(ssi)", pItemData->GetName(), packet.szFromName, packet.bCount));
+	}
+	else if (packet.bArg == 2)
+	{
+		// Delivered to party member
+		PyCallClassMemberFunc(m_apoPhaseWnd[PHASE_WINDOW_GAME], "BINARY_ItemDeliverToParty",
+			Py_BuildValue("(ssi)", pItemData->GetName(), packet.szFromName, packet.bCount));
+	}
+
+	return true;
+}
 
 bool CPythonNetworkStream::RecvItemUsePacket()
 {

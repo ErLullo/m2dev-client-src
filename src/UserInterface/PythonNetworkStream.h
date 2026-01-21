@@ -447,6 +447,7 @@ class CPythonNetworkStream : public CNetworkStream, public CSingleton<CPythonNet
 
 		bool RecvItemDelPacket();					// Alarm to python
 		bool RecvItemSetPacket();					// Alarm to python
+		bool RecvItemGetPacket();					// Alarm to python
 		bool RecvItemUsePacket();					// Alarm to python
 		bool RecvItemUpdatePacket();				// Alarm to python
 		bool RecvItemGroundAddPacket();
@@ -604,6 +605,7 @@ class CPythonNetworkStream : public CNetworkStream, public CSingleton<CPythonNet
 		void __RecvCharacterUpdatePacket(SNetworkUpdateActorData * pkNetUpdateActorData);
 
 		void __FilterInsult(char* szLine, UINT uLineLen);
+		void __LocalizeItemLinks(char* buf, size_t bufSize);
 
 		void __SetGuildID(DWORD id);
 
