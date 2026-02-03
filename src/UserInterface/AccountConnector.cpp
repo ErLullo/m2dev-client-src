@@ -248,6 +248,7 @@ bool CAccountConnector::__AuthState_RecvKeyComplete()
 
 	cipher.SetSessionToken(session_token);
 	cipher.SetActivated(true);
+	DecryptPendingRecvData();
 
 	Tracen("Secure channel established - encryption activated");
 	return true;

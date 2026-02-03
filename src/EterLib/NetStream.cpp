@@ -12,6 +12,15 @@ bool CNetworkStream::IsSecurityMode()
 	return m_secureCipher.IsActivated();
 }
 
+void CNetworkStream::DecryptPendingRecvData()
+{
+	int remaining = m_recvBufInputPos - m_recvBufOutputPos;
+	if (remaining > 0 && m_secureCipher.IsActivated())
+	{
+		m_secureCipher.DecryptInPlace(m_recvBuf + m_recvBufOutputPos, remaining);
+	}
+}
+
 void CNetworkStream::SetRecvBufferSize(int recvBufSize)
 {
 	if (m_recvBuf)

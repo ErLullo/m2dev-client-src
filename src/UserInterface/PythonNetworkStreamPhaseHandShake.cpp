@@ -205,6 +205,7 @@ bool CPythonNetworkStream::RecvKeyComplete()
 
 	cipher.SetSessionToken(decrypted_token);
 	cipher.SetActivated(true);
+	DecryptPendingRecvData();
 
 	Tracen("SECURE CIPHER ACTIVATED");
 	return true;

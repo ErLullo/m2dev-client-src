@@ -37,6 +37,13 @@ void Traceback()
 		str.append("\n");
 	}
 
+	if (!PyErr_Occurred())
+	{
+		str.append("(No Python error set - failure occurred at C++ level)");
+		LogBoxf("Traceback:\n\n%s\n", str.c_str());
+		return;
+	}
+
 	PyObject * exc;
 	PyObject * v;
 	PyObject * tb;
@@ -44,6 +51,42 @@ void Traceback()
 	PyErr_Fetch(&exc, &v, &tb);
 	PyErr_NormalizeException(&exc, &v, &tb);
 
+	// Try using traceback.format_exception for full details
+	PyObject* tbMod = PyImport_ImportModule("traceback");
+	if (tbMod)
+	{
+		PyObject* fmtFunc = PyObject_GetAttrString(tbMod, "format_exception");
+		if (fmtFunc)
+		{
+			PyObject* result = PyObject_CallFunction(fmtFunc, (char*)"OOO",
+				exc ? exc : Py_None,
+				v ? v : Py_None,
+				tb ? tb : Py_None);
+			if (result && PyList_Check(result))
+			{
+				Py_ssize_t n = PyList_Size(result);
+				for (Py_ssize_t i = 0; i < n; ++i)
+				{
+					PyObject* line = PyList_GetItem(result, i);
+					if (line && PyString_Check(line))
+						str.append(PyString_AS_STRING(line));
+				}
+				Py_DECREF(result);
+				Py_DECREF(fmtFunc);
+				Py_DECREF(tbMod);
+				Py_XDECREF(exc);
+				Py_XDECREF(v);
+				Py_XDECREF(tb);
+				LogBoxf("Traceback:\n\n%s\n", str.c_str());
+				return;
+			}
+			Py_XDECREF(result);
+			Py_DECREF(fmtFunc);
+		}
+		Py_DECREF(tbMod);
+	}
+
+	// Fallback: manual extraction
 	if (exc)
 	{
 		PyObject* excName = PyObject_GetAttrString(exc, "__name__");

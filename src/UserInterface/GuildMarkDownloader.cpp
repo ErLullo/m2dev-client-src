@@ -470,6 +470,7 @@ bool CGuildMarkDownloader::__LoginState_RecvKeyComplete()
 
 	cipher.SetSessionToken(session_token);
 	cipher.SetActivated(true);
+	DecryptPendingRecvData();
 
 	Tracen("SECURE CIPHER ACTIVATED");
 	return true;

@@ -67,6 +67,10 @@ class CNetworkStream
 		bool IsSecureCipherActivated() const { return m_secureCipher.IsActivated(); }
 		void ActivateSecureCipher() { m_secureCipher.SetActivated(true); }
 
+		// Decrypt any unprocessed data already in the recv buffer
+		// Must be called after activating the cipher mid-stream
+		void DecryptPendingRecvData();
+
 	private:
 		time_t	m_connectLimitTime;
 
