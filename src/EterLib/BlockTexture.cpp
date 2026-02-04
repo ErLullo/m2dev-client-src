@@ -146,11 +146,11 @@ void CBlockTexture::InvalidateRect(const RECT & c_rsrcRect)
 	DWORD * pdwDst = (DWORD *)lockedRect.pBits;
 	DWORD dwDstWidth = lockedRect.Pitch>>2;
 	DWORD dwSrcWidth = m_pDIB->GetWidth();
-	for (int i = 0; i < iclipHeight; ++i)
+	for (int y = 0; y < iclipHeight; ++y)
 	{
-		for (int i = 0; i < iclipWidth; ++i)
+		for (int x = 0; x < iclipWidth; ++x)
 		{
-			pdwDst[i] = pdwSrc[i];
+			pdwDst[x] = pdwSrc[x];
 		}
 		pdwDst += dwDstWidth;
 		pdwSrc += dwSrcWidth;

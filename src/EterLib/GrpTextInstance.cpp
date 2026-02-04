@@ -38,18 +38,23 @@ int CGraphicTextInstance::Hyperlink_GetText(char* buf, int len)
 	return (written > 0) ? written : 0;
 }
 
-int CGraphicTextInstance::__DrawCharacter(CGraphicFontTexture * pFontTexture, wchar_t text, DWORD dwColor)
+int CGraphicTextInstance::__DrawCharacter(CGraphicFontTexture * pFontTexture, wchar_t text, DWORD dwColor, wchar_t prevChar)
 {
 	CGraphicFontTexture::TCharacterInfomation* pInsCharInfo = pFontTexture->GetCharacterInfomation(text);
 
 	if (pInsCharInfo)
 	{
+		// Round kerning to nearest pixel to keep glyphs on the pixel grid.
+		// Fractional offsets cause bilinear interpolation blur in D3D9.
+		float kern = floorf(pFontTexture->GetKerning(prevChar, text) + 0.5f);
+
 		m_dwColorInfoVector.push_back(dwColor);
 		m_pCharInfoVector.push_back(pInsCharInfo);
+		m_kernVector.push_back(kern);
 
-		m_textWidth += pInsCharInfo->advance;
+		m_textWidth += (int)(pInsCharInfo->advance + kern);
 		m_textHeight = std::max((WORD)pInsCharInfo->height, m_textHeight);
-		return pInsCharInfo->advance;
+		return (int)(pInsCharInfo->advance + kern);
 	}
 
 	return 0;
@@ -99,6 +104,7 @@ void CGraphicTextInstance::Update()
 	auto ResetState = [&, spaceHeight]()
 		{
 			m_pCharInfoVector.clear();
+			m_kernVector.clear();
 			m_dwColorInfoVector.clear();
 			m_hyperlinkVector.clear();
 			m_textWidth = 0;
@@ -121,6 +127,7 @@ void CGraphicTextInstance::Update()
 	}
 
 	m_pCharInfoVector.clear();
+	m_kernVector.clear();
 	m_dwColorInfoVector.clear();
 	m_hyperlinkVector.clear();
 
@@ -154,8 +161,12 @@ void CGraphicTextInstance::Update()
 	// Secret mode: draw '*' instead of actual characters
 	if (m_isSecret)
 	{
+		wchar_t prevCh = 0;
 		for (int i = 0; i < wTextLen; ++i)
-			__DrawCharacter(pFontTexture, L'*', dwColor);
+		{
+			__DrawCharacter(pFontTexture, L'*', dwColor, prevCh);
+			prevCh = L'*';
+		}
 
 		pFontTexture->UpdateTexture();
 		m_isUpdate = true;
@@ -183,8 +194,12 @@ void CGraphicTextInstance::Update()
 				wMsg.data(), (int)wMsg.size(),
 				m_computedRTL);
 
+			wchar_t prevCh = 0;
 			for (size_t i = 0; i < visual.size(); ++i)
-				__DrawCharacter(pFontTexture, visual[i], dwColor);
+			{
+				__DrawCharacter(pFontTexture, visual[i], dwColor, prevCh);
+				prevCh = visual[i];
+			}
 
 			pFontTexture->UpdateTexture();
 			m_isUpdate = true;
@@ -245,8 +260,7 @@ void CGraphicTextInstance::Update()
 		int hyperlinkStep = 0; // 0=normal, 1=collecting metadata, 2=visible hyperlink
 		std::wstring hyperlinkMetadata;
 
-		// Use thread-local buffer to avoid per-call allocation
-		thread_local static std::vector<wchar_t> s_currentSegment;
+		static std::vector<wchar_t> s_currentSegment;
 		s_currentSegment.clear();
 
 		SHyperlink currentHyperlink;
@@ -267,10 +281,12 @@ void CGraphicTextInstance::Update()
 			std::vector<wchar_t> visual = BuildVisualBidiText_Tagless(
 				s_currentSegment.data(), (int)s_currentSegment.size(), forceRTLForBidi);
 
+			wchar_t prevCh = m_pCharInfoVector.empty() ? 0 : 0; // no prev across segments
 			for (size_t j = 0; j < visual.size(); ++j)
 			{
-				int w = __DrawCharacter(pFontTexture, visual[j], segColor);
+				int w = __DrawCharacter(pFontTexture, visual[j], segColor, prevCh);
 				totalWidth += w;
+				prevCh = visual[j];
 			}
 
 			s_currentSegment.clear();
@@ -285,13 +301,15 @@ void CGraphicTextInstance::Update()
 		{
 			outWidth = 0;
 
-			// Use thread-local buffers to avoid allocation
-			thread_local static std::vector<CGraphicFontTexture::TCharacterInfomation*> s_newCharInfos;
-			thread_local static std::vector<DWORD> s_newColors;
+			static std::vector<CGraphicFontTexture::TCharacterInfomation*> s_newCharInfos;
+			static std::vector<DWORD> s_newColors;
+			static std::vector<float> s_newKerns;
 			s_newCharInfos.clear();
 			s_newColors.clear();
+			s_newKerns.clear();
 			s_newCharInfos.reserve(chars.size());
 			s_newColors.reserve(chars.size());
+			s_newKerns.reserve(chars.size());
 
 			for (size_t k = 0; k < chars.size(); ++k)
 			{
@@ -301,16 +319,16 @@ void CGraphicTextInstance::Update()
 
 				s_newCharInfos.push_back(pInfo);
 				s_newColors.push_back(color);
+				s_newKerns.push_back(0.0f);
 
 				outWidth += pInfo->advance;
 				m_textHeight = std::max((WORD)pInfo->height, m_textHeight);
 			}
 
-			// Insert at the beginning of the draw list.
 			m_pCharInfoVector.insert(m_pCharInfoVector.begin(), s_newCharInfos.begin(), s_newCharInfos.end());
 			m_dwColorInfoVector.insert(m_dwColorInfoVector.begin(), s_newColors.begin(), s_newColors.end());
+			m_kernVector.insert(m_kernVector.begin(), s_newKerns.begin(), s_newKerns.end());
 
-			// Shift any already-recorded hyperlinks to the right.
 			for (auto& link : m_hyperlinkVector)
 			{
 				link.sx += outWidth;
@@ -366,7 +384,7 @@ void CGraphicTextInstance::Update()
 					if (!s_currentSegment.empty())
 					{
 						// OPTIMIZED: Use thread-local buffer for visible rendering
-						thread_local static std::vector<wchar_t> s_visibleToRender;
+						static std::vector<wchar_t> s_visibleToRender;
 						s_visibleToRender.clear();
 
 						// Find bracket positions: [ ... ]
@@ -385,7 +403,7 @@ void CGraphicTextInstance::Update()
 							s_visibleToRender.push_back(L'[');
 
 							// Extract inside content and apply BiDi
-							thread_local static std::vector<wchar_t> s_content;
+							static std::vector<wchar_t> s_content;
 							s_content.assign(
 								s_currentSegment.begin() + openBracket + 1,
 								s_currentSegment.begin() + closeBracket);
@@ -430,10 +448,12 @@ void CGraphicTextInstance::Update()
 						{
 							// LTR or non-chat: keep original "append" behavior
 							currentHyperlink.sx = currentHyperlink.ex;
+							wchar_t prevCh = 0;
 							for (size_t j = 0; j < s_visibleToRender.size(); ++j)
 							{
-								int w = __DrawCharacter(pFontTexture, s_visibleToRender[j], currentColor);
+								int w = __DrawCharacter(pFontTexture, s_visibleToRender[j], currentColor, prevCh);
 								currentHyperlink.ex += w;
+								prevCh = s_visibleToRender[j];
 							}
 							m_hyperlinkVector.push_back(currentHyperlink);
 						}
@@ -471,8 +491,14 @@ void CGraphicTextInstance::Update()
 
 	// Simple LTR rendering for plain text (no tags, no RTL)
 	// Just draw characters in logical order
-	for (int i = 0; i < wTextLen; ++i)
-		__DrawCharacter(pFontTexture, wTextBuf[i], dwColor);
+	{
+		wchar_t prevCh = 0;
+		for (int i = 0; i < wTextLen; ++i)
+		{
+			__DrawCharacter(pFontTexture, wTextBuf[i], dwColor, prevCh);
+			prevCh = wTextBuf[i];
+		}
+	}
 
 	pFontTexture->UpdateTexture();
 	m_isUpdate = true;
@@ -580,13 +606,18 @@ void CGraphicTextInstance::Render(RECT * pClipRect)
 			fCurY=fStanY;
 			fFontMaxHeight=0.0f;
 
+			int charIdx = 0;
 			CGraphicFontTexture::TPCharacterInfomationVector::iterator i;
-			for (i=m_pCharInfoVector.begin(); i!=m_pCharInfoVector.end(); ++i)
+			for (i=m_pCharInfoVector.begin(); i!=m_pCharInfoVector.end(); ++i, ++charIdx)
 			{
 				pCurCharInfo = *i;
 
+				float fKern = (charIdx < (int)m_kernVector.size()) ? m_kernVector[charIdx] : 0.0f;
+				fCurX += fKern;
+
 				fFontWidth=float(pCurCharInfo->width);
 				fFontHeight=float(pCurCharInfo->height);
+				fFontMaxHeight=(std::max)(fFontMaxHeight, fFontHeight);
 				fFontAdvance=float(pCurCharInfo->advance);
 
 				if ((fCurX+fFontWidth)-m_v3Position.x > m_fLimitWidth) [[unlikely]] {
@@ -685,13 +716,16 @@ void CGraphicTextInstance::Render(RECT * pClipRect)
 		fCurY=fStanY;
 		fFontMaxHeight=0.0f;
 
-		for (int i = 0; i < m_pCharInfoVector.size(); ++i)
+		for (int i = 0; i < (int)m_pCharInfoVector.size(); ++i)
 		{
 			pCurCharInfo = m_pCharInfoVector[i];
 
+			float fKern = (i < (int)m_kernVector.size()) ? m_kernVector[i] : 0.0f;
+			fCurX += fKern;
+
 			fFontWidth=float(pCurCharInfo->width);
 			fFontHeight=float(pCurCharInfo->height);
-			fFontMaxHeight=(std::max)(fFontHeight, (float)pCurCharInfo->height);
+			fFontMaxHeight=(std::max)(fFontMaxHeight, fFontHeight);
 			fFontAdvance=float(pCurCharInfo->advance);
 
 			if ((fCurX + fFontWidth) - m_v3Position.x > m_fLimitWidth) [[unlikely]] {
@@ -1267,6 +1301,7 @@ void CGraphicTextInstance::Destroy()
 {
 	m_stText="";
 	m_pCharInfoVector.clear();
+	m_kernVector.clear();
 	m_dwColorInfoVector.clear();
 	m_hyperlinkVector.clear();
 	m_logicalToVisualPos.clear();

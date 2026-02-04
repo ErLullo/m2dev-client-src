@@ -4,23 +4,19 @@
 #include "EterBase/Stl.h"
 
 #include "Util.h"
-#include <utf8.h>
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
-#include FT_GLYPH_H
 
 #include <cmath>
 
-// Precomputed gamma LUT to sharpen FreeType's grayscale anti-aliasing.
-// GDI ClearType has high-contrast edges; FreeType grayscale is softer.
-// Gamma < 1.0 boosts mid-range alpha, making edges crisper.
+// Gamma LUT to sharpen grayscale anti-aliasing edges.
 static struct SAlphaGammaLUT {
 	unsigned char table[256];
 	SAlphaGammaLUT() {
 		table[0] = 0;
 		for (int i = 1; i < 256; ++i)
-			table[i] = (unsigned char)(pow(i / 255.0, 0.80) * 255.0 + 0.5);
+			table[i] = (unsigned char)(pow(i / 255.0, 0.85) * 255.0 + 0.5);
 	}
 } s_alphaGammaLUT;
 
@@ -45,11 +41,11 @@ void CGraphicFontTexture::Initialize()
 	m_bItalic = false;
 	m_ascender = 0;
 	m_lineHeight = 0;
+	m_hasKerning = false;
 	m_x = 0;
 	m_y = 0;
 	m_step = 0;
 	m_fontSize = 0;
-	memset(m_fontName, 0, sizeof(m_fontName));
 }
 
 bool CGraphicFontTexture::IsEmpty() const
@@ -122,10 +118,6 @@ bool CGraphicFontTexture::Create(const char* c_szFontName, int fontSize, bool bI
 {
 	Destroy();
 
-	// UTF-8 -> UTF-16 for font name storage
-	std::wstring wFontName = Utf8ToWide(c_szFontName ? c_szFontName : "");
-	wcsncpy_s(m_fontName, wFontName.c_str(), _TRUNCATE);
-
 	m_fontSize = fontSize;
 	m_bItalic = bItalic;
 
@@ -147,9 +139,6 @@ bool CGraphicFontTexture::Create(const char* c_szFontName, int fontSize, bool bI
 	m_pAtlasBuffer = new DWORD[width * height];
 	memset(m_pAtlasBuffer, 0, width * height * sizeof(DWORD));
 
-	// Store UTF-8 name for device reset re-creation
-	m_fontNameUTF8 = c_szFontName ? c_szFontName : "";
-
 	// Create a per-instance FT_Face (this instance owns it)
 	m_ftFace = CFontManager::Instance().CreateFace(c_szFontName);
 	if (!m_ftFace)
@@ -158,11 +147,13 @@ bool CGraphicFontTexture::Create(const char* c_szFontName, int fontSize, bool bI
 		return false;
 	}
 
-	// Set pixel size
 	int pixelSize = (fontSize < 0) ? -fontSize : fontSize;
 	if (pixelSize == 0)
 		pixelSize = 12;
+
 	FT_Set_Pixel_Sizes(m_ftFace, 0, pixelSize);
+
+	m_hasKerning = FT_HAS_KERNING(m_ftFace) != 0;
 
 	// Apply italic via shear matrix if needed
 	if (bItalic)
@@ -234,6 +225,24 @@ bool CGraphicFontTexture::UpdateTexture()
 	return true;
 }
 
+float CGraphicFontTexture::GetKerning(wchar_t prev, wchar_t cur)
+{
+	if (!m_hasKerning || !m_ftFace || prev == 0)
+		return 0.0f;
+
+	FT_UInt prevIndex = FT_Get_Char_Index(m_ftFace, prev);
+	FT_UInt curIndex = FT_Get_Char_Index(m_ftFace, cur);
+
+	if (prevIndex == 0 || curIndex == 0)
+		return 0.0f;
+
+	FT_Vector delta;
+	if (FT_Get_Kerning(m_ftFace, prevIndex, curIndex, FT_KERNING_DEFAULT, &delta) != 0)
+		return 0.0f;
+
+	return (float)(delta.x) / 64.0f;
+}
+
 CGraphicFontTexture::TCharacterInfomation* CGraphicFontTexture::GetCharacterInfomation(wchar_t keyValue)
 {
 	TCharacterKey code = keyValue;
@@ -268,7 +277,10 @@ CGraphicFontTexture::TCharacterInfomation* CGraphicFontTexture::UpdateCharacterI
 			return NULL;
 	}
 
-	if (FT_Load_Glyph(m_ftFace, glyphIndex, FT_LOAD_RENDER | FT_LOAD_TARGET_NORMAL) != 0)
+	if (FT_Load_Glyph(m_ftFace, glyphIndex, FT_LOAD_DEFAULT) != 0)
+		return NULL;
+
+	if (FT_Render_Glyph(m_ftFace->glyph, FT_RENDER_MODE_NORMAL) != 0)
 		return NULL;
 
 	FT_GlyphSlot slot = m_ftFace->glyph;
@@ -335,7 +347,7 @@ CGraphicFontTexture::TCharacterInfomation* CGraphicFontTexture::UpdateCharacterI
 		}
 	}
 
-	// Copy FreeType bitmap into atlas buffer at baseline-normalized position
+	// Copy grayscale FreeType bitmap into atlas buffer with gamma correction
 	for (int row = 0; row < glyphBitmapHeight; ++row)
 	{
 		int atlasY = m_y + yOffset + row;

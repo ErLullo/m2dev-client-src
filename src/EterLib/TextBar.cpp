@@ -10,13 +10,13 @@
 
 #include <cmath>
 
-// Same gamma LUT as GrpFontTexture for consistent text sharpness
+// Gamma LUT matching GrpFontTexture for consistent text sharpness
 static struct STextBarGammaLUT {
 	unsigned char table[256];
 	STextBarGammaLUT() {
 		table[0] = 0;
 		for (int i = 1; i < 256; ++i)
-			table[i] = (unsigned char)(pow(i / 255.0, 0.80) * 255.0 + 0.5);
+			table[i] = (unsigned char)(pow(i / 255.0, 0.85) * 255.0 + 0.5);
 	}
 } s_textBarGammaLUT;
 
@@ -73,15 +73,27 @@ void CTextBar::GetTextExtent(const char* c_szText, SIZE* p_size)
 
 	std::wstring wText = Utf8ToWide(c_szText);
 
+	bool hasKerning = FT_HAS_KERNING(m_ftFace) != 0;
+	FT_UInt prevIndex = 0;
 	int totalAdvance = 0;
+
 	for (size_t i = 0; i < wText.size(); ++i)
 	{
 		FT_UInt glyphIndex = FT_Get_Char_Index(m_ftFace, wText[i]);
 		if (glyphIndex == 0)
 			glyphIndex = FT_Get_Char_Index(m_ftFace, L' ');
 
+		if (hasKerning && prevIndex && glyphIndex)
+		{
+			FT_Vector delta;
+			if (FT_Get_Kerning(m_ftFace, prevIndex, glyphIndex, FT_KERNING_DEFAULT, &delta) == 0)
+				totalAdvance += (int)(delta.x / 64);
+		}
+
 		if (FT_Load_Glyph(m_ftFace, glyphIndex, FT_LOAD_DEFAULT) == 0)
 			totalAdvance += (int)ceilf((float)(m_ftFace->glyph->advance.x) / 64.0f);
+
+		prevIndex = glyphIndex;
 	}
 
 	p_size->cx = totalAdvance;
@@ -107,14 +119,26 @@ void CTextBar::TextOut(int ix, int iy, const char * c_szText)
 
 	DWORD colorRGB = m_textColor;  // 0x00BBGGRR in memory
 
+	bool hasKerning = FT_HAS_KERNING(m_ftFace) != 0;
+	FT_UInt prevIndex = 0;
+
 	for (size_t i = 0; i < wText.size(); ++i)
 	{
 		FT_UInt glyphIndex = FT_Get_Char_Index(m_ftFace, wText[i]);
 		if (glyphIndex == 0)
 			glyphIndex = FT_Get_Char_Index(m_ftFace, L' ');
 
-		FT_Int32 loadFlags = FT_LOAD_RENDER | FT_LOAD_TARGET_NORMAL;
-		if (FT_Load_Glyph(m_ftFace, glyphIndex, loadFlags) != 0)
+		if (hasKerning && prevIndex && glyphIndex)
+		{
+			FT_Vector delta;
+			if (FT_Get_Kerning(m_ftFace, prevIndex, glyphIndex, FT_KERNING_DEFAULT, &delta) == 0)
+				penX += (int)(delta.x / 64);
+		}
+
+		if (FT_Load_Glyph(m_ftFace, glyphIndex, FT_LOAD_DEFAULT) != 0)
+			continue;
+
+		if (FT_Render_Glyph(m_ftFace->glyph, FT_RENDER_MODE_NORMAL) != 0)
 			continue;
 
 		FT_GlyphSlot slot = m_ftFace->glyph;
@@ -151,6 +175,7 @@ void CTextBar::TextOut(int ix, int iy, const char * c_szText)
 		}
 
 		penX += (int)ceilf((float)(slot->advance.x) / 64.0f);
+		prevIndex = glyphIndex;
 	}
 
 	Invalidate();

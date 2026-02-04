@@ -6,7 +6,6 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
-#include <string>
 #include <vector>
 #include <map>
 
@@ -48,6 +47,8 @@ class CGraphicFontTexture : public CGraphicTexture
 		TCharacterInfomation* GetCharacterInfomation(wchar_t keyValue);
 		TCharacterInfomation* UpdateCharacterInfomation(TCharacterKey keyValue);
 
+		float GetKerning(wchar_t prev, wchar_t cur);
+
 		bool IsEmpty() const;
 
 	protected:
@@ -76,12 +77,11 @@ class CGraphicFontTexture : public CGraphicTexture
 		int m_step;
 		bool m_isDirty;
 
-		TCHAR m_fontName[LF_FACESIZE];
-		std::string m_fontNameUTF8;  // stored for device reset re-creation
 		LONG m_fontSize;
 		bool m_bItalic;
 
 		// FreeType metrics cached per-font
 		int m_ascender;
 		int m_lineHeight;
+		bool m_hasKerning;
 };

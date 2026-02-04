@@ -110,10 +110,17 @@ std::string CFontManager::ResolveFontPath(const char* faceName)
 
 	// 3. Fall back to C:\Windows\Fonts
 #ifdef _WIN32
-	char winDir[MAX_PATH];
-	if (GetWindowsDirectoryA(winDir, MAX_PATH))
+	static std::string s_fontsDir;
+	if (s_fontsDir.empty())
 	{
-		std::string systemPath = std::string(winDir) + "\\Fonts\\" + fileName;
+		char winDir[MAX_PATH];
+		if (GetWindowsDirectoryA(winDir, MAX_PATH))
+			s_fontsDir = std::string(winDir) + "\\Fonts\\";
+	}
+
+	if (!s_fontsDir.empty())
+	{
+		std::string systemPath = s_fontsDir + fileName;
 		if (FileExists(systemPath))
 			return systemPath;
 	}
@@ -127,9 +134,9 @@ std::string CFontManager::ResolveFontPath(const char* faceName)
 		if (FileExists(localPath))
 			return localPath;
 
-		if (GetWindowsDirectoryA(winDir, MAX_PATH))
+		if (!s_fontsDir.empty())
 		{
-			std::string systemPath = std::string(winDir) + "\\Fonts\\" + ttcName;
+			std::string systemPath = s_fontsDir + ttcName;
 			if (FileExists(systemPath))
 				return systemPath;
 		}
