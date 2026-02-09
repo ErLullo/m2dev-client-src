@@ -20,6 +20,7 @@ target_link_libraries(UserInterface
 	EterPythonLib
 	GameLib
 	PRTerrainLib
+	PythonModules
 	ScriptLib
 	SpeedTreeLib
 	SphereLib

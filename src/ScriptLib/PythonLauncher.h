@@ -14,7 +14,7 @@ class CPythonLauncher : public CSingleton<CPythonLauncher>
 
 		void Clear();
 
-		bool Create(const char* c_szProgramName="eter.python");
+		bool Create();
 		void SetTraceFunc(int (*pFunc)(PyObject * obj, PyFrameObject * f, int what, PyObject *arg));
 		bool RunLine(const char* c_szLine);
 		bool RunFile(const char* c_szFileName);

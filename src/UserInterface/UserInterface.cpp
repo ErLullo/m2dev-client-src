@@ -52,28 +52,6 @@ static const char * sc_apszPythonLibraryFilenames[] =
 	"\n",
 };
 
-bool CheckPythonLibraryFilenames()
-{
-	for (int i = 0; *sc_apszPythonLibraryFilenames[i] != '\n'; ++i)
-	{
-		std::string stFilenameUtf8 = "lib\\";
-		stFilenameUtf8 += sc_apszPythonLibraryFilenames[i];
-
-		std::wstring stFilenameW = Utf8ToWide(stFilenameUtf8);
-
-		// Check existence
-		if (GetFileAttributesW(stFilenameW.c_str()) == INVALID_FILE_ATTRIBUTES)
-		{
-			return false;
-		}
-
-		// Keep original behavior (forces Windows path normalization)
-		MoveFileW(stFilenameW.c_str(), stFilenameW.c_str());
-	}
-
-	return true;
-}
-
 bool PackInitialize(const char * c_pszFolder)
 {
 	if (_access(c_pszFolder, 0) != 0)
@@ -346,12 +324,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
 	int nArgc = 0;
 	auto szArgv = CommandLineToArgv (lpCmdLine, &nArgc);
-
-	if (!CheckPythonLibraryFilenames())
-	{
-		__ErrorPythonLibraryIsNotExist();
-		goto Clean;
-	}
 
 	Main (hInstance, lpCmdLine);
 	::CoUninitialize();
