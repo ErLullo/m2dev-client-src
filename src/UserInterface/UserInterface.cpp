@@ -147,6 +147,7 @@ bool PackInitialize(const char * c_pszFolder)
 		"uiscript",
 		"ETC",
 		"uiloading",
+		"Maps",
 	};
 
 	Tracef("PackInitialize: Loading root.pck...");
