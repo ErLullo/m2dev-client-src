@@ -2377,6 +2377,9 @@ void initPlayer()
 	PyModule_AddIntConstant(poModule, "ATTACKER_BONUS",			POINT_PARTY_ATT_GRADE);
     PyModule_AddIntConstant(poModule, "MAX_NUM",				POINT_MAX_NUM);
 	////
+	// MR-12: Add Mall Attack speed affect
+	PyModule_AddIntConstant(poModule, "POINT_ATT_SPEED",		POINT_ATT_SPEED);
+	// MR-12: -- END OF -- Add Mall Attack speed affect
 	PyModule_AddIntConstant(poModule, "POINT_CRITICAL_PCT",		POINT_CRITICAL_PCT);
 	PyModule_AddIntConstant(poModule, "POINT_PENETRATE_PCT",	POINT_PENETRATE_PCT);
 	PyModule_AddIntConstant(poModule, "POINT_MALL_ATTBONUS",	POINT_MALL_ATTBONUS);

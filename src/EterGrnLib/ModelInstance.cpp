@@ -17,6 +17,8 @@ void CGrannyModelInstance::SetMaterialImagePointer(const char* c_szImageName, CG
 void CGrannyModelInstance::SetMaterialData(const char* c_szImageName, const SMaterialData& c_rkMaterialData)
 {
 	m_kMtrlPal.SetMaterialData(c_szImageName, c_rkMaterialData);
+
+	material_data_ = c_rkMaterialData;
 }
 
 void CGrannyModelInstance::SetSpecularInfo(const char* c_szMtrlName, BOOL bEnable, float fPower)
@@ -87,6 +89,7 @@ void CGrannyModelInstance::__Initialize()
 	{
 		m_pModel->Release();
 	}
+
 	m_pModel = NULL;
 	mc_pParentInstance = NULL;
 	m_iParentBoneIndex = 0;
@@ -106,8 +109,10 @@ void CGrannyModelInstance::__Initialize()
 	m_pgrnCtrl = NULL;
 	m_pgrnAni = NULL;
 
-	m_dwOldUpdateFrame=0;
-
+	// MR-12: Fix specular isolation issue
+	material_data_ = {};
+	m_dwOldUpdateFrame = 0;
+	// MR-12: -- END OF -- Fix specular isolation issue
 }
 
 CGrannyModelInstance::CGrannyModelInstance()

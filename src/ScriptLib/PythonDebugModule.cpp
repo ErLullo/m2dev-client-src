@@ -59,6 +59,16 @@ PyObject* dbgTraceTemp(PyObject* poSelf, PyObject* poArgs)
 	TempTrace(szMsg, false);
 	return Py_BuildNone();
 }
+
+PyObject* dbgTraceTempn(PyObject* poSelf, PyObject* poArgs)
+{
+	char* szMsg;
+	if (!PyTuple_GetString(poArgs, 0, &szMsg))
+		return Py_BuildException();
+
+	TempTracen(szMsg, false);
+	return Py_BuildNone();
+}
 // MR-11: -- END OF -- Temporary trace functions for debugging (not for regular logging)
 
 PyObject* dbgRegisterExceptionString(PyObject* poSelf, PyObject* poArgs)
@@ -83,6 +93,7 @@ void initdbg()
 		{ "TraceError",					dbgTraceError,				METH_VARARGS },
 		// MR-11: Temporary trace functions for debugging (not for regular logging)
 		{ "TraceTemp",					dbgTraceTemp,				METH_VARARGS },
+		{ "TraceTempn",					dbgTraceTempn,				METH_VARARGS },
 		// MR-11: -- END OF -- Temporary trace functions for debugging (not for regular logging)
 		{ "RegisterExceptionString",	dbgRegisterExceptionString,	METH_VARARGS },
 		{ NULL, 						NULL									 },

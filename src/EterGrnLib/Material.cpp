@@ -148,6 +148,7 @@ LPDIRECT3DTEXTURE9 CGrannyMaterial::GetD3DTexture(int iStage) const
 
 	CGraphicImage * pImage = ratImage.GetPointer();
 	const CGraphicTexture * pTexture = pImage->GetTexturePointer();
+
 	return pTexture->GetD3DTexture();
 }
 
@@ -183,10 +184,12 @@ BOOL CGrannyMaterial::__IsSpecularEnable() const
 	return m_bSpecularEnable;
 }
 
-float CGrannyMaterial::__GetSpecularPower() const
+// MR-12: Fix specular isolation issue
+float CGrannyMaterial::GetSpecularPower() const
 {
 	return m_fSpecularPower;
 }
+// MR-12: -- END OF -- Fix specular isolation issue
 
 extern const std::string& GetModelLocalPath();
 
@@ -316,7 +319,9 @@ void CGrannyMaterial::__ApplySpecularRenderState()
 	else
 		STATEMANAGER.SetTexture(1, NULL);
 
-	STATEMANAGER.SetRenderState(D3DRS_TEXTUREFACTOR, D3DXCOLOR(g_fSpecularColor.r, g_fSpecularColor.g, g_fSpecularColor.b, __GetSpecularPower()));
+	// MR-12: Fix specular isolation issue
+	STATEMANAGER.SetRenderState(D3DRS_TEXTUREFACTOR, D3DXCOLOR(g_fSpecularColor.r, g_fSpecularColor.g, g_fSpecularColor.b, GetSpecularPower()));
+	// MR-12: -- END OF -- Fix specular isolation issue
 	STATEMANAGER.SaveTextureStageState(1, D3DTSS_TEXCOORDINDEX, D3DTSS_TCI_CAMERASPACEREFLECTIONVECTOR);
 	STATEMANAGER.SaveTextureStageState(0, D3DTSS_COLORARG1,	D3DTA_TEXTURE);
 	STATEMANAGER.SaveTextureStageState(0, D3DTSS_COLORARG2,	D3DTA_DIFFUSE);

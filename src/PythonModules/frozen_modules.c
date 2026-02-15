@@ -471,6 +471,7 @@ const struct _frozen _PyImport_FrozenModules[] = {
     {"encodings.latin_1", M_encodings__latin_1, 2747, 0},
     {"encodings.mbcs", M_encodings__mbcs, 2240, 0},
     {"encodings.utf_8", M_encodings__utf_8, 2300, 0},
+    {"encodings.utf_8_sig", M_encodings__utf_8, 2300, 0},
     {"enum", M_enum, 87996, 0},
     {"filecmp", M_filecmp, 15279, 0},
     {"fileinput", M_fileinput, 21106, 0},

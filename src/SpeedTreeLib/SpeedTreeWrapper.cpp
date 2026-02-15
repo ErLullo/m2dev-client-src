@@ -1,4 +1,4 @@
-///////////////////////////////////////////////////////////////////////  
+﻿///////////////////////////////////////////////////////////////////////  
 //	CSpeedTreeWrapper Class
 //
 //	(c) 2003 IDV, Inc.
@@ -65,10 +65,8 @@ m_bIsInstance(false),
 m_pInstanceOf(NULL),
 m_pGeometryCache(NULL),
 m_usNumLeafLods(0),
-m_pBranchIndexCounts(NULL),
 m_pBranchIndexBuffer(NULL),
 m_pBranchVertexBuffer(NULL),
-m_pFrondIndexCounts(NULL),
 m_pFrondIndexBuffer(NULL),
 m_pFrondVertexBuffer(NULL),
 m_pLeafVertexBuffer(NULL),
@@ -93,6 +91,9 @@ void CSpeedTreeWrapper::SetVertexShaders(LPDIRECT3DVERTEXDECLARATION9 pBranchVer
 
 void CSpeedTreeWrapper::OnRenderPCBlocker()
 {
+	if (!ms_dwBranchVertexShader || !ms_pLeafVertexShaderDecl || !ms_pLeafVertexShader)
+		CSpeedTreeForestDirectX8::Instance().EnsureVertexShaders();
+
 	if (ms_dwBranchVertexShader == 0)
 	{
 		ms_dwBranchVertexShader = LoadBranchShader(ms_lpd3dDevice);
@@ -101,7 +102,7 @@ void CSpeedTreeWrapper::OnRenderPCBlocker()
 	
 	CSpeedTreeForestDirectX8::Instance().UpdateSystem(ELTimer_GetMSec() / 1000.0f);
 	
-	// �ϳ��� ������ �� ���� LOD ������� ����
+	// ï¿½Ï³ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ LOD ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	m_pSpeedTree->SetLodLevel(1.0f);
 	//Advance();
 	
@@ -202,22 +203,25 @@ void CSpeedTreeWrapper::OnRenderPCBlocker()
 	}
 	RenderFronds();
 	
-	STATEMANAGER.SetVertexDeclaration(ms_pLeafVertexShaderDecl);
-	STATEMANAGER.SaveVertexShader(ms_pLeafVertexShader);
-	
-// 	SetupLeafForTreeType();
+	if (ms_pLeafVertexShaderDecl && ms_pLeafVertexShader)
 	{
-		// pass leaf tables to shader
-#ifdef WRAPPER_USE_GPU_LEAF_PLACEMENT
-		UploadLeafTables(c_nVertexShader_LeafTables);
-#endif
+		STATEMANAGER.SetVertexDeclaration(ms_pLeafVertexShaderDecl);
+		STATEMANAGER.SaveVertexShader(ms_pLeafVertexShader);
 		
-		if (!m_CompositeImageInstance.IsEmpty())
-			STATEMANAGER.SetTexture(0, m_CompositeImageInstance.GetTextureReference().GetD3DTexture());
+// 	SetupLeafForTreeType();
+		{
+			// pass leaf tables to shader
+#ifdef WRAPPER_USE_GPU_LEAF_PLACEMENT
+			UploadLeafTables(c_nVertexShader_LeafTables);
+#endif
+			
+			if (!m_CompositeImageInstance.IsEmpty())
+				STATEMANAGER.SetTexture(0, m_CompositeImageInstance.GetTextureReference().GetD3DTexture());
+		}
+		RenderLeaves();
+		STATEMANAGER.RestoreVertexShader();
 	}
-	RenderLeaves();
 	EndLeafForTreeType();
-	STATEMANAGER.RestoreVertexShader();
 	
 	STATEMANAGER.SetRenderState(D3DRS_LIGHTING, FALSE);
 	STATEMANAGER.SetRenderState(D3DRS_COLORVERTEX, FALSE);
@@ -236,6 +240,9 @@ void CSpeedTreeWrapper::OnRenderPCBlocker()
 
 void CSpeedTreeWrapper::OnRender()
 {
+	if (!ms_dwBranchVertexShader || !ms_pLeafVertexShaderDecl || !ms_pLeafVertexShader)
+		CSpeedTreeForestDirectX8::Instance().EnsureVertexShaders();
+
 	if (ms_dwBranchVertexShader == 0)
 	{
 		ms_dwBranchVertexShader = LoadBranchShader(ms_lpd3dDevice);
@@ -244,7 +251,7 @@ void CSpeedTreeWrapper::OnRender()
 	
 	CSpeedTreeForestDirectX8::Instance().UpdateSystem(ELTimer_GetMSec() / 1000.0f);
 	
-	// �ϳ��� ������ �� ���� LOD ������� ����
+	// ï¿½Ï³ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ LOD ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	m_pSpeedTree->SetLodLevel(1.0f);
 	//Advance();
 	
@@ -282,13 +289,16 @@ void CSpeedTreeWrapper::OnRender()
 	SetupFrondForTreeType();
 	RenderFronds();
 	
-	STATEMANAGER.SetVertexDeclaration(ms_pLeafVertexShaderDecl);
-	STATEMANAGER.SaveVertexShader(ms_pLeafVertexShader);
-	
-	SetupLeafForTreeType();
-	RenderLeaves();
+	if (ms_pLeafVertexShaderDecl && ms_pLeafVertexShader)
+	{
+		STATEMANAGER.SetVertexDeclaration(ms_pLeafVertexShaderDecl);
+		STATEMANAGER.SaveVertexShader(ms_pLeafVertexShader);
+		
+		SetupLeafForTreeType();
+		RenderLeaves();
+		STATEMANAGER.RestoreVertexShader();
+	}
 	EndLeafForTreeType();
-	STATEMANAGER.RestoreVertexShader();
 	
 	STATEMANAGER.SetRenderState(D3DRS_LIGHTING, FALSE);
 	STATEMANAGER.SetRenderState(D3DRS_COLORVERTEX, FALSE);
@@ -314,14 +324,12 @@ CSpeedTreeWrapper::~CSpeedTreeWrapper()
 		{
 			SAFE_RELEASE(m_pBranchVertexBuffer);
 			SAFE_RELEASE(m_pBranchIndexBuffer);
-			SAFE_DELETE_ARRAY(m_pBranchIndexCounts);
 		}
 		
 		if (m_unFrondVertexCount > 0)
 		{	
 			SAFE_RELEASE(m_pFrondVertexBuffer);
 			SAFE_RELEASE(m_pFrondIndexBuffer);
-			SAFE_DELETE_ARRAY(m_pFrondIndexCounts);
 		}
 		
 		for (short i = 0; i < m_usNumLeafLods; ++i)
@@ -544,32 +552,58 @@ void CSpeedTreeWrapper::SetupBranchBuffers(void)
 			m_pBranchVertexBuffer->Unlock();
 		}
 		
-		// create and fill the index counts for each LOD
-		UINT unNumLodLevels = m_pSpeedTree->GetNumBranchLodLevels();
-		m_pBranchIndexCounts = new unsigned short[unNumLodLevels];
-		for (UINT i = 0; i < unNumLodLevels; ++i)
-		{
-			// force update for particular LOD
-			m_pSpeedTree->GetGeometry(*m_pGeometryCache, SpeedTree_BranchGeometry, i);
-			
-			// check if this LOD has branches
-			if (pBranches->m_usNumStrips > 0)
-				m_pBranchIndexCounts[i] = pBranches->m_pStripLengths[0];
-			else
-				m_pBranchIndexCounts[i] = 0;
-		}
-		// set back to highest LOD
+		const uint32_t unNumLodLevels = m_pSpeedTree->GetNumBranchLodLevels();
+		m_branchStripOffsets.clear();
+		m_branchStripLengths.clear();
+		if (unNumLodLevels > 0)
+			m_branchStripLengths.resize(unNumLodLevels);
+
+		// set LOD0 for strip offsets/index buffer sizing
 		m_pSpeedTree->GetGeometry(*m_pGeometryCache, SpeedTree_BranchGeometry, 0);
-		
-		// the first LOD level contains the most indices of all the levels, so
-		// we use its size to allocate the index buffer
-		ms_lpd3dDevice->CreateIndexBuffer(m_pBranchIndexCounts[0] * sizeof(unsigned short), D3DUSAGE_WRITEONLY, D3DFMT_INDEX16, D3DPOOL_DEFAULT, &m_pBranchIndexBuffer, NULL);
-		
-		// fill the index buffer
-		unsigned short* pIndexBuffer = NULL;
-		m_pBranchIndexBuffer->Lock(0, 0, reinterpret_cast<void**>(&pIndexBuffer), 0);
-		memcpy(pIndexBuffer, pBranches->m_pStrips[0], pBranches->m_pStripLengths[0] * sizeof(unsigned short));
-		m_pBranchIndexBuffer->Unlock();
+		const uint32_t stripCount = pBranches->m_usNumStrips;
+		uint32_t totalIndexCount = 0;
+		if (stripCount > 0)
+		{
+			m_branchStripOffsets.resize(stripCount);
+			for (uint32_t s = 0; s < stripCount; ++s)
+			{
+				m_branchStripOffsets[s] = totalIndexCount;
+				totalIndexCount += pBranches->m_pStripLengths[s];
+			}
+		}
+
+		for (uint32_t i = 0; i < unNumLodLevels; ++i)
+		{
+			m_pSpeedTree->GetGeometry(*m_pGeometryCache, SpeedTree_BranchGeometry, i);
+			auto& lengths = m_branchStripLengths[i];
+			lengths.assign(stripCount, 0);
+			const uint32_t lodStripCount = pBranches->m_usNumStrips;
+			for (uint32_t s = 0; s < stripCount && s < lodStripCount; ++s)
+			{
+				lengths[s] = pBranches->m_pStripLengths[s];
+			}
+		}
+		// set back to highest LOD for buffer fill
+		m_pSpeedTree->GetGeometry(*m_pGeometryCache, SpeedTree_BranchGeometry, 0);
+
+		if (totalIndexCount > 0)
+		{
+			// the first LOD level contains the most indices of all the levels, so
+			// we use its size to allocate the index buffer
+			ms_lpd3dDevice->CreateIndexBuffer(totalIndexCount * sizeof(uint16_t), D3DUSAGE_WRITEONLY, D3DFMT_INDEX16, D3DPOOL_DEFAULT, &m_pBranchIndexBuffer, NULL);
+			
+			// fill the index buffer
+			uint16_t* pIndexBuffer = NULL;
+			m_pBranchIndexBuffer->Lock(0, 0, reinterpret_cast<void**>(&pIndexBuffer), 0);
+			uint32_t cursor = 0;
+			for (uint32_t s = 0; s < stripCount; ++s)
+			{
+				const uint32_t length = pBranches->m_pStripLengths[s];
+				memcpy(pIndexBuffer + cursor, pBranches->m_pStrips[s], length * sizeof(uint16_t));
+				cursor += length;
+			}
+			m_pBranchIndexBuffer->Unlock();
+		}
 	}
 }
 
@@ -629,32 +663,58 @@ void CSpeedTreeWrapper::SetupFrondBuffers(void)
 		}
 		m_pFrondVertexBuffer->Unlock();
 		
-		// create and fill the index counts for each LOD
-		UINT unNumLodLevels = m_pSpeedTree->GetNumFrondLodLevels();
-		m_pFrondIndexCounts = new unsigned short[unNumLodLevels];
-		for (WORD j = 0; j < unNumLodLevels; ++j)
+		const uint32_t unNumLodLevels = m_pSpeedTree->GetNumFrondLodLevels();
+		m_frondStripOffsets.clear();
+		m_frondStripLengths.clear();
+		if (unNumLodLevels > 0)
+			m_frondStripLengths.resize(unNumLodLevels);
+
+		// set LOD0 for strip offsets/index buffer sizing
+		m_pSpeedTree->GetGeometry(*m_pGeometryCache, SpeedTree_FrondGeometry, -1, 0);
+		const uint32_t stripCount = pFronds->m_usNumStrips;
+		uint32_t totalIndexCount = 0;
+		if (stripCount > 0)
 		{
-			// force update for this LOD
-			m_pSpeedTree->GetGeometry(*m_pGeometryCache, SpeedTree_FrondGeometry, -1, j);
-			
-			// check if this LOD has fronds
-			if (pFronds->m_usNumStrips > 0)
-				m_pFrondIndexCounts[j] = pFronds->m_pStripLengths[0];
-			else
-				m_pFrondIndexCounts[j] = 0;
+			m_frondStripOffsets.resize(stripCount);
+			for (uint32_t s = 0; s < stripCount; ++s)
+			{
+				m_frondStripOffsets[s] = totalIndexCount;
+				totalIndexCount += pFronds->m_pStripLengths[s];
+			}
 		}
-		// go back to highest LOD
+
+		for (uint32_t j = 0; j < unNumLodLevels; ++j)
+		{
+			m_pSpeedTree->GetGeometry(*m_pGeometryCache, SpeedTree_FrondGeometry, -1, j);
+			auto& lengths = m_frondStripLengths[j];
+			lengths.assign(stripCount, 0);
+			const uint32_t lodStripCount = pFronds->m_usNumStrips;
+			for (uint32_t s = 0; s < stripCount && s < lodStripCount; ++s)
+			{
+				lengths[s] = pFronds->m_pStripLengths[s];
+			}
+		}
+		// go back to highest LOD for buffer fill
 		m_pSpeedTree->GetGeometry(*m_pGeometryCache, SpeedTree_FrondGeometry, -1, 0);
 		
-		// the first LOD level contains the most indices of all the levels, so
-		// we use its size to allocate the index buffer
-		ms_lpd3dDevice->CreateIndexBuffer(m_pFrondIndexCounts[0] * sizeof(unsigned short), D3DUSAGE_WRITEONLY, D3DFMT_INDEX16, D3DPOOL_DEFAULT, &m_pFrondIndexBuffer, NULL);
-		
-		// fill the index buffer
-		unsigned short * pIndexBuffer = NULL;
-		m_pFrondIndexBuffer->Lock(0, 0, reinterpret_cast<void**>(&pIndexBuffer), 0);
-		memcpy(pIndexBuffer, pFronds->m_pStrips[0], pFronds->m_pStripLengths[0] * sizeof(unsigned short));
-		m_pFrondIndexBuffer->Unlock();
+		if (totalIndexCount > 0)
+		{
+			// the first LOD level contains the most indices of all the levels, so
+			// we use its size to allocate the index buffer
+			ms_lpd3dDevice->CreateIndexBuffer(totalIndexCount * sizeof(uint16_t), D3DUSAGE_WRITEONLY, D3DFMT_INDEX16, D3DPOOL_DEFAULT, &m_pFrondIndexBuffer, NULL);
+			
+			// fill the index buffer
+			uint16_t * pIndexBuffer = NULL;
+			m_pFrondIndexBuffer->Lock(0, 0, reinterpret_cast<void**>(&pIndexBuffer), 0);
+			uint32_t cursor = 0;
+			for (uint32_t s = 0; s < stripCount; ++s)
+			{
+				const uint32_t length = pFronds->m_pStripLengths[s];
+				memcpy(pIndexBuffer + cursor, pFronds->m_pStrips[s], length * sizeof(uint16_t));
+				cursor += length;
+			}
+			m_pFrondIndexBuffer->Unlock();
+		}
 	}
 }
 
@@ -787,12 +847,14 @@ CSpeedTreeWrapper::SpeedTreeWrapperPtr CSpeedTreeWrapper::MakeInstance()
 		
 		// use the same buffers
 		spInstance->m_pBranchIndexBuffer = m_pBranchIndexBuffer;
-		spInstance->m_pBranchIndexCounts = m_pBranchIndexCounts;
+		spInstance->m_branchStripOffsets = m_branchStripOffsets;
+		spInstance->m_branchStripLengths = m_branchStripLengths;
 		spInstance->m_pBranchVertexBuffer = m_pBranchVertexBuffer;
 		spInstance->m_unBranchVertexCount = m_unBranchVertexCount;
 		
 		spInstance->m_pFrondIndexBuffer = m_pFrondIndexBuffer;
-		spInstance->m_pFrondIndexCounts = m_pFrondIndexCounts;
+		spInstance->m_frondStripOffsets = m_frondStripOffsets;
+		spInstance->m_frondStripLengths = m_frondStripLengths;
 		spInstance->m_pFrondVertexBuffer = m_pFrondVertexBuffer;
 		spInstance->m_unFrondVertexCount = m_unFrondVertexCount;
 		
@@ -908,19 +970,27 @@ void CSpeedTreeWrapper::RenderBranches(void) const
 {
 	m_pSpeedTree->GetGeometry(*m_pGeometryCache, SpeedTree_BranchGeometry);
 	
-	if (m_pGeometryCache->m_fBranchAlphaTestValue)
+	if (m_pGeometryCache->m_sBranches.m_usVertexCount > 0 && m_pBranchIndexBuffer && !m_branchStripLengths.empty() && !m_branchStripOffsets.empty())
 	{
+		const int lod = m_pGeometryCache->m_sBranches.m_nDiscreteLodLevel;
+		if (lod < 0 || static_cast<size_t>(lod) >= m_branchStripLengths.size())
+			return;
+
 		PositionTree();
 		
 		// set alpha test value
 		STATEMANAGER.SetRenderState(D3DRS_ALPHAREF, DWORD(m_pGeometryCache->m_fBranchAlphaTestValue));
 		
-		// render if this LOD has branches
-		if (m_pBranchIndexCounts && 
-			m_pBranchIndexCounts[m_pGeometryCache->m_sBranches.m_nDiscreteLodLevel] > 0)
+		const auto& lengths = m_branchStripLengths[lod];
+		const size_t stripCount = lengths.size() < m_branchStripOffsets.size() ? lengths.size() : m_branchStripOffsets.size();
+		for (size_t s = 0; s < stripCount; ++s)
 		{
-			ms_faceCount += m_pBranchIndexCounts[m_pGeometryCache->m_sBranches.m_nDiscreteLodLevel] - 2;
-			STATEMANAGER.DrawIndexedPrimitive(D3DPT_TRIANGLESTRIP, 0, m_pGeometryCache->m_sBranches.m_usVertexCount, 0, m_pBranchIndexCounts[m_pGeometryCache->m_sBranches.m_nDiscreteLodLevel] - 2);
+			const uint16_t stripLength = lengths[s];
+			if (stripLength > 2)
+			{
+				ms_faceCount += stripLength - 2;
+				STATEMANAGER.DrawIndexedPrimitive(D3DPT_TRIANGLESTRIP, 0, m_pGeometryCache->m_sBranches.m_usVertexCount, m_branchStripOffsets[s], stripLength - 2);
+			}
 		}
 	}
 }
@@ -981,19 +1051,27 @@ void CSpeedTreeWrapper::RenderFronds(void) const
 {
 	m_pSpeedTree->GetGeometry(*m_pGeometryCache, SpeedTree_FrondGeometry);
 	
-	if (m_pGeometryCache->m_fFrondAlphaTestValue > 0.0f)
+	if (m_pGeometryCache->m_sFronds.m_usVertexCount > 0 && m_pFrondIndexBuffer && !m_frondStripLengths.empty() && !m_frondStripOffsets.empty())
 	{
+		const int lod = m_pGeometryCache->m_sFronds.m_nDiscreteLodLevel;
+		if (lod < 0 || static_cast<size_t>(lod) >= m_frondStripLengths.size())
+			return;
+
 		PositionTree();
 		
 		// set alpha test value
 		STATEMANAGER.SetRenderState(D3DRS_ALPHAREF, DWORD(m_pGeometryCache->m_fFrondAlphaTestValue));
 		
-		// render if this LOD has fronds
-		if (m_pFrondIndexCounts &&
-			m_pFrondIndexCounts[m_pGeometryCache->m_sFronds.m_nDiscreteLodLevel] > 0)
+		const auto& lengths = m_frondStripLengths[lod];
+		const size_t stripCount = lengths.size() < m_frondStripOffsets.size() ? lengths.size() : m_frondStripOffsets.size();
+		for (size_t s = 0; s < stripCount; ++s)
 		{
-			ms_faceCount += m_pFrondIndexCounts[m_pGeometryCache->m_sFronds.m_nDiscreteLodLevel] - 2;
-			STATEMANAGER.DrawIndexedPrimitive(D3DPT_TRIANGLESTRIP, 0, m_pGeometryCache->m_sFronds.m_usVertexCount, 0, m_pFrondIndexCounts[m_pGeometryCache->m_sFronds.m_nDiscreteLodLevel] - 2);
+			const uint16_t stripLength = lengths[s];
+			if (stripLength > 2)
+			{
+				ms_faceCount += stripLength - 2;
+				STATEMANAGER.DrawIndexedPrimitive(D3DPT_TRIANGLESTRIP, 0, m_pGeometryCache->m_sFronds.m_usVertexCount, m_frondStripOffsets[s], stripLength - 2);
+			}
 		}
 	}
 }
@@ -1048,6 +1126,11 @@ void CSpeedTreeWrapper::RenderLeaves(void) const
 {
 	// update leaf geometry
 	m_pSpeedTree->GetGeometry(*m_pGeometryCache, SpeedTree_LeafGeometry);
+
+	if (!m_pLeafVertexBuffer || m_usNumLeafLods == 0)
+		return;
+
+	const int maxLeafLod = static_cast<int>(m_usNumLeafLods);
 	
 	// update the LOD level vertex arrays we need
 #if defined(WRAPPER_USE_GPU_LEAF_PLACEMENT) && defined(WRAPPER_USE_GPU_WIND)
@@ -1060,9 +1143,18 @@ void CSpeedTreeWrapper::RenderLeaves(void) const
 		// reference to leaf structure
 		const CSpeedTreeRT::SGeometry::SLeaf* pLeaf = (i == 0) ? &m_pGeometryCache->m_sLeaves0 : &m_pGeometryCache->m_sLeaves1;
 		int unLod = pLeaf->m_nDiscreteLodLevel;
+
+		if (!pLeaf->m_bIsActive || pLeaf->m_usLeafCount == 0)
+			continue;
+
+		if (unLod < 0 || unLod >= maxLeafLod)
+			continue;
+
+		if (!m_pLeafVertexBuffer[unLod])
+			continue;
 		
 #if defined WRAPPER_USE_GPU_LEAF_PLACEMENT
-		if (pLeaf->m_bIsActive && !m_pLeavesUpdatedByCpu[unLod])
+		if (m_pLeavesUpdatedByCpu && !m_pLeavesUpdatedByCpu[unLod])
 		{
 			// update the centers
 			SFVFLeafVertex* pVertex = NULL;
@@ -1081,7 +1173,6 @@ void CSpeedTreeWrapper::RenderLeaves(void) const
 			m_pLeavesUpdatedByCpu[unLod] = true;
 		}
 #else
-		if (pLeaf->m_bIsActive && m_pLeafVertexBuffer[unLod])
 		{ 
 			// update the vertex positions
 			SFVFLeafVertex * pVertex = NULL;
@@ -1139,14 +1230,17 @@ void CSpeedTreeWrapper::RenderLeaves(void) const
 		
 		int unLod = pLeaf->m_nDiscreteLodLevel;
 		
-		if (unLod > -1 && pLeaf->m_bIsActive && pLeaf->m_usLeafCount > 0)
-		{
-			STATEMANAGER.SetStreamSource(0, m_pLeafVertexBuffer[unLod], sizeof(SFVFLeafVertex));
-			STATEMANAGER.SetRenderState(D3DRS_ALPHAREF, DWORD(pLeaf->m_fAlphaTestValue));
-			
-			ms_faceCount += pLeaf->m_usLeafCount * 2;
-			STATEMANAGER.DrawPrimitive(D3DPT_TRIANGLELIST, 0, pLeaf->m_usLeafCount * 2);
-		}
+		if (unLod < 0 || unLod >= maxLeafLod || !pLeaf->m_bIsActive || pLeaf->m_usLeafCount == 0)
+			continue;
+
+		if (!m_pLeafVertexBuffer[unLod])
+			continue;
+
+		STATEMANAGER.SetStreamSource(0, m_pLeafVertexBuffer[unLod], sizeof(SFVFLeafVertex));
+		STATEMANAGER.SetRenderState(D3DRS_ALPHAREF, DWORD(pLeaf->m_fAlphaTestValue));
+		
+		ms_faceCount += pLeaf->m_usLeafCount * 2;
+		STATEMANAGER.DrawPrimitive(D3DPT_TRIANGLELIST, 0, pLeaf->m_usLeafCount * 2);
 	}
 }
 
@@ -1156,6 +1250,9 @@ void CSpeedTreeWrapper::RenderLeaves(void) const
 
 void CSpeedTreeWrapper::EndLeafForTreeType(void)
 {
+	if (!m_pLeavesUpdatedByCpu)
+		return;
+
 	// reset copy flags for CPU wind
 	for (UINT i = 0; i < m_usNumLeafLods; ++i)
 		m_pLeavesUpdatedByCpu[i] = false;
@@ -1455,3 +1552,4 @@ void CSpeedTreeWrapper::OnUpdateCollisionData(const CStaticCollisionDataVector *
 		AddCollision(&CollisionData, &mat);
 	}
 }
+

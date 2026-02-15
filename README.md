@@ -15,23 +15,11 @@ This repository contains the source code necessary to compile the game client ex
 ---
 
 ## 📋 Changelog
-
-### ⬆️ Feature Improvements
- - **Packet dump has its own log file**: The debug process now generates 4 log files:
-   - `log.txt`: What you know and love, minus packet dumps
-   - `syserr.txt`: What you know and hate to see, as you know and hate it!
-   - `packetdump.txt`: All packet dumps go here
-   - `pdlog.txt`: The complete log with everything included
- - **Console outputs are now colored!**: Not a big difference, red for syserr outputs, dimmer color for packet dumps.
- - **TempTrace**: A type of output made to stand out in the console! Made to be used as a temporary debugging helper, it has blue background so you can easily spot it in the console. It logs normally in files and it is exported to the Python system via the C++ API!
- Available C++ calls:
-   - `TraceTemp`
-   - `TraceTempf`
-   - `TraceTempn`
-   - `TraceTempfn`
- Available Python calls:
-   - `TempTrace`
- Usage: same as `Trace(f/n/fn)`, and `ErrorTrace` for Python
+### 🐛 Bug fixes
+ - **TempTrace**: Added `n` support for Python
+ - **Togglable slots**: Fixed slots not deactivating on death
+ - **Affects**: Added affect shower support for Mall Attack Speed
+ - **Specular**: Fixed a bug where specular would not isolate to the targeted item. Swapping for example to a weapon with different specular would cause all surrounding weapon meshes to change specular as well. The issue has been fixed.
 
 <br>
 <br>

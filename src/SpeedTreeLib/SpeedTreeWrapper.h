@@ -1,4 +1,4 @@
-///////////////////////////////////////////////////////////////////////  
+ï»¿///////////////////////////////////////////////////////////////////////  
 //	SpeedTreeRTExample Class
 //
 //	(c) 2003 IDV, Inc.
@@ -43,6 +43,7 @@
 #include <d3dx9.h>
 #include <vector>
 #include <memory>
+#include <cstdint>
 
 #include "EterLib/GrpObjectInstance.h"
 #include "EterLib/GrpImageInstance.h"
@@ -91,8 +92,8 @@ public:
 	virtual void				SetPosition(float x, float y, float z);
 	virtual void				CalculateBBox();
 
-	virtual void				OnRender(); // Render ½Ã¿¡ ¸Ş¼Òµå, ±×·¯³ª ÇÁ¸®ºä³ª Æ¯¼öÇÑ °æ¿ì¿¡¸¸ Á÷Á¢ Render ÄİÀ» ºÎ¸£¸ç 
-											// ±× ÀÌ¿Ü¿¡´Â RenderBranches, RenderFronds µîÀÇ ¸Ş¼Òµå¸¦ CSpeedTreeForest¿¡¼­ È£ÃâÇÑ´Ù.
+	virtual void				OnRender(); // Render Â½ÃƒÂ¿Â¡ Â¸ÃÂ¼Ã’ÂµÃ¥, Â±Ã—Â·Â¯Â³Âª Ã‡ÃÂ¸Â®ÂºÃ¤Â³Âª Ã†Â¯Â¼Ã¶Ã‡Ã‘ Â°Ã¦Â¿Ã¬Â¿Â¡Â¸Â¸ ÃÃ·ÃÂ¢ Render Ã„ÃÃ€Â» ÂºÃÂ¸Â£Â¸Ã§ 
+											// Â±Ã— Ã€ÃŒÂ¿ÃœÂ¿Â¡Â´Ã‚ RenderBranches, RenderFronds ÂµÃ®Ã€Ã‡ Â¸ÃÂ¼Ã’ÂµÃ¥Â¸Â¦ CSpeedTreeForestÂ¿Â¡Â¼Â­ ÃˆÂ£ÃƒÃ¢Ã‡Ã‘Â´Ã™.
 	virtual void				OnBlendRender() {}
 	virtual void				OnRenderToShadowMap() {}
 	virtual void				OnRenderShadow() {}
@@ -172,13 +173,15 @@ private:
 	LPDIRECT3DVERTEXBUFFER9			m_pBranchVertexBuffer;			// branch vertex buffer
 	unsigned int					m_unBranchVertexCount;			// number of vertices in branches
 	LPDIRECT3DINDEXBUFFER9			m_pBranchIndexBuffer;			// branch index buffer
-	unsigned short*					m_pBranchIndexCounts;			// number of indexes per branch LOD level
+	std::vector<uint32_t>			m_branchStripOffsets;			// strip start indices (LOD0 ordering)
+	std::vector<std::vector<uint16_t>> m_branchStripLengths;			// [lod][strip] index counts
 	
 	// frond buffers
 	LPDIRECT3DVERTEXBUFFER9			m_pFrondVertexBuffer;			// frond vertex buffer
 	unsigned int					m_unFrondVertexCount;			// number of vertices in frond
 	LPDIRECT3DINDEXBUFFER9			m_pFrondIndexBuffer;			// frond index buffer
-	unsigned short*					m_pFrondIndexCounts;			// number of indexes per frond LOD level
+	std::vector<uint32_t>			m_frondStripOffsets;			// strip start indices (LOD0 ordering)
+	std::vector<std::vector<uint16_t>> m_frondStripLengths;			// [lod][strip] index counts
 	
 	// leaf buffers
 	unsigned short					m_usNumLeafLods;				// the number of leaf LODs
@@ -205,3 +208,4 @@ private:
 };
 
 #pragma warning(pop)
+

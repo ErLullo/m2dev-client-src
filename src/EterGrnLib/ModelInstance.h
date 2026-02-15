@@ -193,6 +193,9 @@ class CGrannyModelInstance : public CGraphicCollisionObject
 
 		// TEST
 		CGrannyModelInstance** m_ppkSkeletonInst;
+		// MR-12: Fix specular isolation issue
+		SMaterialData material_data_;
+		// MR-12: -- END OF -- Fix specular isolation issue
 		// END_OF_TEST
 #ifdef _TEST
 		D3DXMATRIX TEST_matWorld;

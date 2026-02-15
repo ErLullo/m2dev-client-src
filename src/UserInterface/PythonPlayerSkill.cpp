@@ -10,6 +10,30 @@
 void CPythonPlayer::ClearAffects()
 {
 	PyCallClassMemberFunc(m_ppyGameWindow, "ClearAffects", Py_BuildValue("()"));
+
+	// MR-12: Deactivate all active toggle skills when affects are cleared (e.g., on death)
+	for (int i = 0; i < SKILL_MAX_NUM; ++i)
+	{
+		TSkillInstance & rkSkillInst = m_playerStatus.aSkill[i];
+		
+		// Skip empty skill slots
+		if (0 == rkSkillInst.dwIndex)
+			continue;
+
+		CPythonSkill::TSkillData * pSkillData;
+		if (!CPythonSkill::Instance().GetSkillData(rkSkillInst.dwIndex, &pSkillData))
+			continue;
+
+		// Only deactivate toggle skills that are currently active
+		if (!pSkillData->IsToggleSkill())
+			continue;
+
+		if (!rkSkillInst.bActive)
+			continue;
+
+		__DeactivateSkillSlot(i);
+	}
+	// MR-12: -- END OF -- Deactivate all active toggle skills when affects are cleared (e.g., on death)
 }
 
 void CPythonPlayer::SetAffect(UINT uAffect)

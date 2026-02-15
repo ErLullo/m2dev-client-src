@@ -60,6 +60,12 @@ class CGrannyMaterial : public CReferenceObject
 
 		LPDIRECT3DTEXTURE9		GetD3DTexture(int iStage) const;
 
+		// MR-12: Fix specular isolation issue
+		float					GetSpecularPower() const;
+		bool					IsSpecularEnabled() const { return m_bSpecularEnable; }
+		BYTE					GetSphereMapIndex() const { return m_bSphereMapIndex; }
+		// MR-12: -- END OF -- Fix specular isolation issue
+
 		bool					IsTwoSided() const		{ return m_bTwoSideRender; }
 
 		
@@ -67,7 +73,6 @@ class CGrannyMaterial : public CReferenceObject
 		CGraphicImage *			__GetImagePointer(const char * c_szFileName);
 
 		BOOL					__IsSpecularEnable() const;
-		float					__GetSpecularPower() const;		
 
 		void					__ApplyDiffuseRenderState();
 		void					__RestoreDiffuseRenderState();
