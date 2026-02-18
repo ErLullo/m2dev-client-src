@@ -7,6 +7,19 @@
 
 #include "PropertyLoader.h"
 
+// MR-14: Fog update by Alaric
+// Not the proper way to handle this but I'm lazy
+#ifdef _DEBUG
+	#undef _DEBUG
+	#include <python/python.h>
+	#define _DEBUG
+#else
+	#include <python/python.h>
+#endif
+
+#include "UserInterface/PythonSystem.h"
+// MR-14: -- END OF -- Fog update by Alaric
+
 //////////////////////////////////////////////////////////////////////////
 // 기본 함수
 //////////////////////////////////////////////////////////////////////////
@@ -251,12 +264,30 @@ void CMapManager::BeginEnvironment()
 		DWORD dwFogColor = mc_pcurEnvironmentData->FogColor;
 		STATEMANAGER.SetRenderState(D3DRS_FOGCOLOR, dwFogColor);
 
-		if (mc_pcurEnvironmentData->bDensityFog)
+		// MR-14: Fog update by Alaric
+
+		// DIFFERENCE WITH THE OFFICIAL VERSION:
+		/*
+		Currently the official does not use the buttons "Dense", "Middle", "Light" for fog density. Instead,
+		they use an On/Off boolean variable. To maintain the classic feel in the settings, we customized the
+		modern official functionality into the 3-way button controls.
+
+		To migrate to boolean (official-like), replace mc_pcurEnvironmentData->bDensityFog with m_isFogModeEnabled
+		and remove the const float fFogDensityLevel[3] and instead, multiple mc_pcurEnvironmentData->bFogLevel with
+		the official 0.000010f value for the fDensity.
+
+		To migrate with the official, other variables in this update must be adjusted as well.
+		*/
+
+		if (mc_pcurEnvironmentData->bDensityFog && mc_pcurEnvironmentData->bFogLevel != 0)
 		{
-			float fDensity = 0.00015f;
+			const float fFogDensityLevel[3] = { 0.000020f, 0.000010f, 0.000005f };
+			float fDensity = mc_pcurEnvironmentData->bFogLevel * fFogDensityLevel[CPythonSystem::Instance().GetFogLevel()];
+
 			STATEMANAGER.SetRenderState(D3DRS_FOGVERTEXMODE, D3DFOG_EXP);					// pixel fog
 			STATEMANAGER.SetRenderState(D3DRS_FOGDENSITY, *((DWORD *) &fDensity));			// vertex fog
 		}
+		// MR-14: -- END OF -- Fog update by Alaric
 		else
 		{
 			CSpeedTreeForestDirectX8& rkForest=CSpeedTreeForestDirectX8::Instance();
@@ -267,6 +298,7 @@ void CMapManager::BeginEnvironment()
 
 			float fFogNear=mc_pcurEnvironmentData->GetFogNearDistance();
 			float fFogFar=mc_pcurEnvironmentData->GetFogFarDistance();
+
 			STATEMANAGER.SetRenderState(D3DRS_FOGVERTEXMODE, D3DFOG_LINEAR);								// vertex fox
 			STATEMANAGER.SetRenderState(D3DRS_RANGEFOGENABLE, TRUE);											// vertex fox
 			STATEMANAGER.SetRenderState(D3DRS_FOGSTART, *((DWORD *) &fFogNear));	// USED BY D3DFOG_LINEAR

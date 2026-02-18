@@ -143,6 +143,9 @@ typedef struct SEnvironmentData
 	float GetFogFarDistance() const;
 	
 	D3DXCOLOR FogColor;
+	// MR-14: Fog update by Alaric
+	BYTE bFogLevel;
+	// MR-14: -- END OF -- Fog update by Alaric
 
 	// Filtering
 	BOOL bFilteringEnable;

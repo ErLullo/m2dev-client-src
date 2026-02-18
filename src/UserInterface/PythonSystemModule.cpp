@@ -372,10 +372,32 @@ PyObject * systemSetShadowLevel(PyObject * poSelf, PyObject * poArgs)
 	return Py_BuildNone();
 }
 
+// MR-14: Fog update by Alaric
+PyObject * systemGetFogLevel(PyObject * poSelf, PyObject * poArgs)
+{
+	return Py_BuildValue("i", CPythonSystem::Instance().GetFogLevel());
+}
+
+PyObject * systemSetFogLevel(PyObject * poSelf, PyObject * poArgs)
+{
+	int iLevel;
+	if (!PyTuple_GetInteger(poArgs, 0, &iLevel))
+		return Py_BuildException();
+
+	CPythonSystem::Instance().SetFogLevel(iLevel);
+	return Py_BuildNone();
+}
+// MR-14: -- END OF -- Fog update by Alaric
+
 void initsystem()
 {
 	static PyMethodDef s_methods[] =
 	{
+		// MR-14: Fog update by Alaric
+		{ "GetFogLevel",				systemGetFogLevel,				METH_VARARGS },
+		{ "SetFogLevel",				systemSetFogLevel,				METH_VARARGS },
+		// MR-14: -- END OF -- Fog update by Alaric
+
 		{ "GetWidth",					systemGetWidth,					METH_VARARGS },
 		{ "GetHeight",					systemGetHeight,				METH_VARARGS },
 

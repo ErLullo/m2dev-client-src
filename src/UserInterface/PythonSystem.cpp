@@ -244,6 +244,18 @@ void CPythonSystem::SetShadowLevel(unsigned int level)
 	CPythonBackground::instance().RefreshShadowLevel();
 }
 
+// MR-14: Fog update by Alaric
+int CPythonSystem::GetFogLevel()
+{
+	return m_Config.iFogLevel;
+}
+
+void CPythonSystem::SetFogLevel(unsigned int level)
+{
+	m_Config.iFogLevel = MIN(level, 2);
+}
+// MR-14: -- END OF -- Fog update by Alaric
+
 int CPythonSystem::IsSaveID()
 {
 	return m_Config.isSaveID;
@@ -299,6 +311,9 @@ void CPythonSystem::SetDefaultConfig()
 	m_Config.bDecompressDDS		= 0;
 	m_Config.bSoftwareTiling	= 0;
 	m_Config.iShadowLevel		= 3;
+	// MR-14: Fog update by Alaric
+	m_Config.iFogLevel			= 0;
+	// MR-14: -- END OF -- Fog update by Alaric
 	m_Config.bViewChat			= true;
 	m_Config.bAlwaysShowName	= DEFAULT_VALUE_ALWAYS_SHOW_NAME;
 	m_Config.bShowDamage		= true;
@@ -431,6 +446,10 @@ bool CPythonSystem::LoadConfig()
 			m_Config.bSoftwareTiling = atoi(value);
 		else if (!stricmp(command, "SHADOW_LEVEL"))
 			m_Config.iShadowLevel = atoi(value);
+		// MR-14: Fog update by Alaric
+		else if (!stricmp(command, "FOG_LEVEL"))
+			m_Config.iFogLevel = atoi(value);
+		// MR-14: -- END OF -- Fog update by Alaric
 		else if (!stricmp(command, "DECOMPRESSED_TEXTURE"))
 			m_Config.bDecompressDDS = atoi(value) == 1 ? true : false;
 		else if (!stricmp(command, "NO_SOUND_CARD"))
@@ -520,11 +539,11 @@ bool CPythonSystem::SaveConfig()
 				m_Config.bDecompressDDS);
 
 	if (m_Config.bWindowed == 1)
-		fprintf(fp, "WINDOWED				%d\n", m_Config.bWindowed);
+		fprintf(fp, "WINDOWED			%d\n", m_Config.bWindowed);
 	if (m_Config.bViewChat == 0)
-		fprintf(fp, "VIEW_CHAT				%d\n", m_Config.bViewChat);
+		fprintf(fp, "VIEW_CHAT			%d\n", m_Config.bViewChat);
 	if (m_Config.bAlwaysShowName != DEFAULT_VALUE_ALWAYS_SHOW_NAME)
-		fprintf(fp, "ALWAYS_VIEW_NAME		%d\n", m_Config.bAlwaysShowName);
+		fprintf(fp, "ALWAYS_VIEW_NAME	%d\n", m_Config.bAlwaysShowName);
 	if (m_Config.bShowDamage == 0)
 		fprintf(fp, "SHOW_DAMAGE		%d\n", m_Config.bShowDamage);
 	if (m_Config.bShowSalesText == 0)
@@ -533,6 +552,9 @@ bool CPythonSystem::SaveConfig()
 	fprintf(fp, "USE_DEFAULT_IME		%d\n", m_Config.bUseDefaultIME);
 	fprintf(fp, "SOFTWARE_TILING		%d\n", m_Config.bSoftwareTiling);
 	fprintf(fp, "SHADOW_LEVEL			%d\n", m_Config.iShadowLevel);
+	// MR-14: Fog update by Alaric
+	fprintf(fp, "FOG_LEVEL				%d\n", m_Config.iFogLevel);
+	// MR-14: -- END OF -- Fog update by Alaric
 	fprintf(fp, "\n");
 
 	fclose(fp);

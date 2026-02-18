@@ -16,10 +16,7 @@ This repository contains the source code necessary to compile the game client ex
 
 ## 📋 Changelog
 ### 🐛 Bug fixes
- - **TempTrace**: Added `n` support for Python
- - **Togglable slots**: Fixed slots not deactivating on death
- - **Affects**: Added affect shower support for Mall Attack Speed
- - **Specular**: Fixed a bug where specular would not isolate to the targeted item. Swapping for example to a weapon with different specular would cause all surrounding weapon meshes to change specular as well. The issue has been fixed.
+ - **Fog update**: Adjusted fog settings to work with the updated official version using the 3 classic options.
 
 <br>
 <br>

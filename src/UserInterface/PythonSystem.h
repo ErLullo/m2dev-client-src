@@ -57,6 +57,9 @@ class CPythonSystem : public CSingleton<CPythonSystem>
 			bool			is_object_culling;
 			int				iDistance;
 			int				iShadowLevel;
+			// MR-14: Fog update by Alaric
+			int 			iFogLevel;
+			// MR-14: -- END OF -- Fog update by Alaric
 
 			FLOAT			music_volume;
 			FLOAT			voice_volume;
@@ -148,6 +151,11 @@ class CPythonSystem : public CSingleton<CPythonSystem>
 		int								GetDistance();
 		int								GetShadowLevel();
 		void							SetShadowLevel(unsigned int level);
+
+		// MR-14: Fog update by Alaric
+		int								GetFogLevel();
+		void							SetFogLevel(unsigned int level);
+		// MR-14: -- END OF -- Fog update by Alaric
 
 	protected:
 		TResolution						m_ResolutionList[RESOLUTION_MAX_NUM];

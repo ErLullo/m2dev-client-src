@@ -241,7 +241,9 @@ void CStateManager::SetDefaultState()
 	SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
 	SetRenderState(D3DRS_FOGENABLE, FALSE);
 	SetRenderState(D3DRS_FOGCOLOR, 0xFF000000);
-	SetRenderState(D3DRS_FOGTABLEMODE, D3DFOG_LINEAR);
+	// MR-14: Fog update by Alaric
+	SetRenderState(D3DRS_FOGTABLEMODE, D3DFOG_NONE);
+	// MR-14: -- END OF -- Fog update by Alaric
 	SetRenderState(D3DRS_FOGVERTEXMODE, D3DFOG_LINEAR);
 	SetRenderState(D3DRS_RANGEFOGENABLE, FALSE);
 	SetRenderState(D3DRS_ZENABLE, TRUE);

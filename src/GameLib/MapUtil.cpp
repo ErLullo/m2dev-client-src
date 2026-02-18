@@ -27,8 +27,10 @@ void Environment_Init(SEnvironmentData& envData)
 	envData.Material.Specular = D3DXCOLOR(0.0f, 0.0f, 0.0f, 1.0f);
 	envData.Material.Power = 0.0f;
 
-	envData.bFogEnable = FALSE;
-	envData.bDensityFog = FALSE;
+	// MR-14: Fog update by Alaric
+	envData.bFogEnable = TRUE;
+	envData.bDensityFog = TRUE;
+	// MR-14: -- END OF -- Fog update by Alaric
 	envData.m_fFogNearDistance = 25600.0f * 0.5f;
 	envData.m_fFogFarDistance = 25600.0f * 0.7f;
 	envData.FogColor = D3DXCOLOR(0.5f, 0.5f, 0.5f, 1.0f);
@@ -114,10 +116,13 @@ bool Environment_Load(SEnvironmentData& envData, const char* envFileName)
 
 	if (textLoader.SetChildNode("fog"))
 	{
-		textLoader.GetTokenBoolean("enable", &envData.bFogEnable);
-		textLoader.GetTokenBoolean("isdensity", &envData.bDensityFog);
-		textLoader.GetTokenFloat("neardistance", &envData.m_fFogNearDistance);
-		textLoader.GetTokenFloat("fardistance", &envData.m_fFogFarDistance);
+		// MR-14: Fog update by Alaric
+		// textLoader.GetTokenBoolean("enable", &envData.bFogEnable);
+		// textLoader.GetTokenBoolean("isdensity", &envData.bDensityFog);
+		// textLoader.GetTokenFloat("neardistance", &envData.m_fFogNearDistance);
+		// textLoader.GetTokenFloat("fardistance", &envData.m_fFogFarDistance);
+		textLoader.GetTokenByte("foglevel", &envData.bFogLevel);
+		// MR-14: -- END OF -- Fog update by Alaric
 		textLoader.GetTokenColor("color", &envData.FogColor);
 		textLoader.SetParentNode();
 	}
