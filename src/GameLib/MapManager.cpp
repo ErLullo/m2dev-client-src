@@ -290,7 +290,7 @@ void CMapManager::BeginEnvironment()
 		// MR-14: -- END OF -- Fog update by Alaric
 		else
 		{
-			CSpeedTreeForestDirectX8& rkForest=CSpeedTreeForestDirectX8::Instance();
+			CSpeedTreeForestDirectX& rkForest=CSpeedTreeForestDirectX::Instance();
 			rkForest.SetFog(
 				mc_pcurEnvironmentData->GetFogNearDistance(), 
 				mc_pcurEnvironmentData->GetFogFarDistance()
