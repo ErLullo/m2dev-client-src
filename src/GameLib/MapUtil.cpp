@@ -117,17 +117,23 @@ bool Environment_Load(SEnvironmentData& envData, const char* envFileName)
 
 	if (textLoader.SetChildNode("fog"))
 	{
-		// MR-14: Fog update by Alaric
-		// textLoader.GetTokenBoolean("enable", &envData.bFogEnable);
-		// textLoader.GetTokenBoolean("isdensity", &envData.bDensityFog);
-		// textLoader.GetTokenFloat("neardistance", &envData.m_fFogNearDistance);
-		// textLoader.GetTokenFloat("fardistance", &envData.m_fFogFarDistance);
-		textLoader.GetTokenByte("foglevel", &envData.bFogLevel);
-		// MR-14: -- END OF -- Fog update by Alaric
+		if (textLoader.GetTokenByte("foglevel", &envData.bFogLevel))
+		{
+			envData.bDensityFog = true;
+		}
+		else
+		{
+			envData.bDensityFog = false;
+			textLoader.GetTokenBoolean("enable", &envData.bFogEnable);
+			textLoader.GetTokenFloat("neardistance", &envData.m_fFogNearDistance);
+			textLoader.GetTokenFloat("fardistance", &envData.m_fFogFarDistance);
+		}
+
 		textLoader.GetTokenColor("color", &envData.FogColor);
+
 		textLoader.SetParentNode();
 	}
-
+	
 	if (textLoader.SetChildNode("filter"))
 	{
 		textLoader.GetTokenBoolean("enable", (BOOL *) &envData.bFilteringEnable);
