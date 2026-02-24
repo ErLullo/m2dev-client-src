@@ -69,20 +69,13 @@ class CArea
 			float fx, fy, fz;
 			DWORD dwRange;
 			float fMaxVolumeAreaPercentage;
-			MaSoundInstance* playSoundInstance;
-			float fNextPlayTime;
 			prt::TPropertyAmbience AmbienceData;
+			DWORD ambienceId; // SoundEngine emitter handle
 
 			SAmbienceInstance();
 			virtual ~SAmbienceInstance() {}
-			void __Update(float fxCenter, float fyCenter, float fzCenter);
-			void (SAmbienceInstance::*Update)(float fxCenter, float fyCenter, float fzCenter);
-			void UpdateOnceSound(float fxCenter, float fyCenter, float fzCenter);
-			void UpdateStepSound(float fxCenter, float fyCenter, float fzCenter);
-			void UpdateLoopSound(float fxCenter, float fyCenter, float fzCenter);
 			void Render();
 			bool Picking();
-			float __GetVolumeFromDistance(float fDistance);
 		} TAmbienceInstance;
 
 		typedef struct SObjectInstance

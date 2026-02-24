@@ -11,6 +11,8 @@ SoundEngine::SoundEngine()
 
 SoundEngine::~SoundEngine()
 {
+    ClearAmbienceEmitters();
+
 	for (auto& [name, instance] : m_Sounds2D)
 		instance.Destroy();
 
@@ -53,32 +55,28 @@ bool SoundEngine::PlaySound2D(const std::string& name)
 	return instance.Play();
 }
 
-MaSoundInstance* SoundEngine::PlaySound3D(const std::string& name, float fx, float fy, float fz)
+MaSoundInstance* SoundEngine::PlaySound3D(const std::string& name, float fx, float fy, float fz, int loopCount)
 {
-	if (auto instance = Internal_GetInstance3D(name))
-	{
-		constexpr float minDist = 100.0f; // 1m
-		constexpr float maxDist = 5000.0f; // 50m
+    if (auto instance = Internal_GetInstance3D(name))
+    {
+        constexpr float minDist = 100.0f;
+        constexpr float maxDist = 5000.0f;
 
-		instance->SetPosition(fx - m_CharacterPosition.x,
-							  fy - m_CharacterPosition.y,
-							  fz - m_CharacterPosition.z);
-		instance->Config3D(true, minDist, maxDist);
-		instance->SetVolume(m_SoundVolume);
-		instance->Play();
-		return instance;
-	}
-	return nullptr;
+        instance->SetPosition(fx - m_CharacterPosition.x,
+                              fy - m_CharacterPosition.y,
+                              fz - m_CharacterPosition.z);
+        instance->Config3D(true, minDist, maxDist);
+        instance->SetVolume(m_SoundVolume);
+        instance->SetLoopCount(loopCount);
+        instance->Play();
+        return instance;
+    }
+    return nullptr;
 }
 
 MaSoundInstance* SoundEngine::PlayAmbienceSound3D(float fx, float fy, float fz, const std::string& name, int loopCount)
 {
-	auto vec3 = ma_engine_listener_get_position(&m_Engine, 0);
-	float dx = fx - vec3.x;
-	float dy = fy - vec3.y;
-	float dz = fz - vec3.z;
-	float distance = sqrtf(dx * dx + dy * dy + dz * dz);
-	return PlaySound3D(name, fx, fy, fz);
+    return PlaySound3D(name, fx, fy, fz, loopCount);
 }
 
 void SoundEngine::StopAllSound3D()
@@ -255,4 +253,222 @@ bool SoundEngine::Internal_LoadSoundFromPack(const std::string& name)
 		memcpy(buffer.data(), soundFile.data(), soundFile.size());
 	}
 	return true;
+}
+
+SoundEngine::AmbienceId SoundEngine::RegisterAmbienceEmitter(const AmbienceEmitterDesc& desc)
+{
+    AmbienceEmitterInternal emitter;
+    emitter.desc = desc;
+    emitter.instance = nullptr;
+    emitter.nextPlayTime = 0.0f;
+
+    AmbienceId id = m_NextAmbienceId++;
+    m_AmbienceEmitters.emplace(id, std::move(emitter));
+    return id;
+}
+
+void SoundEngine::UnregisterAmbienceEmitter(AmbienceId id)
+{
+    auto it = m_AmbienceEmitters.find(id);
+    if (it == m_AmbienceEmitters.end())
+        return;
+
+    AmbienceEmitterInternal& e = it->second;
+    if (e.instance)
+    {
+        e.instance->Stop();
+        e.instance = nullptr;
+    }
+
+    m_AmbienceEmitters.erase(it);
+}
+
+void SoundEngine::ClearAmbienceEmitters()
+{
+    for (auto& [id, e] : m_AmbienceEmitters)
+    {
+        if (e.instance)
+        {
+            e.instance->Stop();
+            e.instance = nullptr;
+        }
+    }
+
+    m_AmbienceEmitters.clear();
+    m_NextAmbienceId = 1;
+}
+
+float SoundEngine::ComputeAmbienceVolume(float distance,
+                                         float range,
+                                         float maxVolumeAreaPercentage) const
+{
+    if (range <= 0.0f)
+        return 1.0f;
+
+    float p = std::clamp(maxVolumeAreaPercentage, 0.0f, 0.999f);
+    float maxRadius = range * p;
+
+    if (maxRadius <= 0.0f)
+        return 1.0f;
+
+    if (distance <= maxRadius)
+        return 1.0f;
+
+    float denom = (range - maxRadius);
+    if (denom <= 0.0f)
+        return 1.0f;
+
+    float t = (distance - maxRadius) / denom;
+    float vol = 1.0f - t;
+    if (vol < 0.0f) vol = 0.0f;
+    if (vol > 1.0f) vol = 1.0f;
+    return vol;
+}
+
+void SoundEngine::UpdateAmbience()
+{
+    if (m_AmbienceEmitters.empty())
+        return;
+
+    float listenerX = m_CharacterPosition.x;
+    float listenerY = m_CharacterPosition.y;
+    float listenerZ = m_CharacterPosition.z;
+    float now = CTimer::Instance().GetCurrentSecond();
+
+    for (auto& [id, e] : m_AmbienceEmitters)
+    {
+        float dx = e.desc.x - listenerX;
+        float dy = e.desc.y - listenerY;
+        float dz = e.desc.z - listenerZ;
+        float distance = sqrtf(dx * dx + dy * dy + dz * dz);
+
+        switch (e.desc.playType)
+        {
+        case AmbiencePlayType::Loop:
+            UpdateEmitterLoop(e, distance, now);
+            break;
+        case AmbiencePlayType::Once:
+            UpdateEmitterOnce(e, distance, now);
+            break;
+        case AmbiencePlayType::Step:
+            UpdateEmitterStep(e, distance, now);
+            break;
+        }
+    }
+}
+
+void SoundEngine::UpdateEmitterLoop(AmbienceEmitterInternal& e,
+                                    float distance,
+                                    float now)
+{
+    bool inside = (distance < e.desc.range);
+
+    if (inside)
+    {
+        bool needStart = false;
+
+        if (!e.instance)
+        {
+            needStart = true;
+        }
+        else if (!e.instance->IsPlaying())
+        {
+            needStart = true;
+            e.instance->Stop();
+            e.instance = nullptr;
+        }
+
+        if (needStart)
+        {
+            if (!e.desc.soundName.empty())
+            {
+                e.instance = PlayAmbienceSound3D(e.desc.x, e.desc.y, e.desc.z,
+                                                 e.desc.soundName, 0);
+            }
+
+            if (!e.instance)
+            {
+                return;
+            }
+        }
+
+        if (e.instance && e.instance->IsPlaying())
+        {
+            e.instance->SetPosition(e.desc.x - m_CharacterPosition.x,
+                                    e.desc.y - m_CharacterPosition.y,
+                                    e.desc.z - m_CharacterPosition.z);
+
+            float vol = ComputeAmbienceVolume(distance,
+                                              e.desc.range,
+                                              e.desc.maxVolumeAreaPercentage);
+            e.instance->SetVolume(vol * m_SoundVolume);
+        }
+    }
+    else
+    {
+        if (e.instance)
+        {
+            e.instance->Stop();
+            e.instance = nullptr;
+        }
+    }
+}
+
+void SoundEngine::UpdateEmitterOnce(AmbienceEmitterInternal& e,
+                                    float distance,
+                                    float now)
+{
+    bool inside = (distance < e.desc.range);
+
+    if (inside)
+    {
+        if (!e.instance || !e.instance->IsPlaying())
+        {
+            if (!e.desc.soundName.empty())
+            {
+                e.instance = PlayAmbienceSound3D(e.desc.x, e.desc.y, e.desc.z,
+                                                 e.desc.soundName, 1);
+            }
+        }
+    }
+    else
+    {
+        if (e.instance)
+        {
+            e.instance->Stop();
+            e.instance = nullptr;
+        }
+    }
+}
+
+void SoundEngine::UpdateEmitterStep(AmbienceEmitterInternal& e,
+                                    float distance,
+                                    float now)
+{
+    bool inside = (distance < e.desc.range);
+
+    if (inside)
+    {
+        if (now > e.nextPlayTime)
+        {
+            if (!e.desc.soundName.empty())
+            {
+                e.instance = PlayAmbienceSound3D(e.desc.x, e.desc.y, e.desc.z,
+                                                 e.desc.soundName, 1);
+            }
+
+            float interval = e.desc.playInterval +
+                             frandom(0.0f, e.desc.playIntervalVariation);
+            e.nextPlayTime = now + interval;
+        }
+    }
+    else
+    {
+        if (e.instance)
+        {
+            e.instance->Stop();
+            e.instance = nullptr;
+        }
+        e.nextPlayTime = 0.0f;
+    }
 }

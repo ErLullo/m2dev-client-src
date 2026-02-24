@@ -161,17 +161,41 @@ bool MaSoundInstance::IsFading() const
 
 void MaSoundInstance::Update()
 {
-	if (m_FadeRatePerFrame != 0.0f)
-	{
-		float targetVolume = std::clamp<float>(m_FadeTargetVolume, 0.0f, 1.0f);
-		float volume = std::clamp<float>(GetVolume() + m_FadeRatePerFrame, 0.0f, 1.0f);
-		if ((m_FadeRatePerFrame > 0.0f && volume >= targetVolume) || (m_FadeRatePerFrame < 0.0f && volume <= targetVolume))
-		{
-			volume = m_FadeTargetVolume;
-			m_FadeRatePerFrame = 0.0f;
-			if (m_FadeTargetVolume <= 0.0f)
-				ma_sound_stop(&m_Sound);
-		}
-		ma_sound_set_volume(&m_Sound, volume);
-	}
+    // Fade
+    if (m_FadeRatePerFrame != 0.0f)
+    {
+        float targetVolume = std::clamp<float>(m_FadeTargetVolume, 0.0f, 1.0f);
+        float volume = std::clamp<float>(GetVolume() + m_FadeRatePerFrame, 0.0f, 1.0f);
+        if ((m_FadeRatePerFrame > 0.0f && volume >= targetVolume) || (m_FadeRatePerFrame < 0.0f && volume <= targetVolume))
+        {
+            volume = m_FadeTargetVolume;
+            m_FadeRatePerFrame = 0.0f;
+            if (m_FadeTargetVolume <= 0.0f)
+                ma_sound_stop(&m_Sound);
+        }
+        ma_sound_set_volume(&m_Sound, volume);
+    }
+
+    // Loop count
+    if (!IsPlaying() && m_LoopCount > 0 && m_LoopsRemaining > 0)
+    {
+        m_LoopsRemaining--;
+        ma_sound_seek_to_pcm_frame(&m_Sound, 0);
+        ma_sound_start(&m_Sound);
+    }
+}
+
+void MaSoundInstance::SetLoopCount(int loopCount)
+{
+    m_LoopCount = loopCount;
+    if (loopCount == 0) //infinite loop
+    {
+        ma_sound_set_looping(&m_Sound, MA_TRUE);
+        m_LoopsRemaining = 0;
+    }
+    else //finite loop
+    {
+        ma_sound_set_looping(&m_Sound, MA_FALSE);
+        m_LoopsRemaining = loopCount;
+    }
 }

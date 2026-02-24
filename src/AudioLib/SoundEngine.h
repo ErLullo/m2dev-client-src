@@ -33,6 +33,29 @@ public:
 	SoundEngine();
 
 	~SoundEngine();
+	
+    enum class AmbiencePlayType
+    {
+        Once,
+        Step,
+        Loop
+    };
+
+    struct AmbienceEmitterDesc
+    {
+        std::string soundName;
+        float x{ 0.0f };
+        float y{ 0.0f };
+        float z{ 0.0f };
+        float range{ 0.0f };
+        float maxVolumeAreaPercentage{ 0.0f }; // 0..1
+
+        AmbiencePlayType playType{ AmbiencePlayType::Loop };
+        float playInterval{ 0.0f };            // STEP only
+        float playIntervalVariation{ 0.0f };   // STEP only
+    };
+
+    using AmbienceId = std::uint32_t;
 
 	bool Initialize();
 
@@ -40,7 +63,7 @@ public:
 
 	bool PlaySound2D(const std::string& name);
 
-	MaSoundInstance* PlaySound3D(const std::string& name, float fx, float fy, float fz);
+	MaSoundInstance* PlaySound3D(const std::string& name, float fx, float fy, float fz, int loopCount = 1);
 
 	MaSoundInstance* PlayAmbienceSound3D(float fx, float fy, float fz, const std::string& name, int loopCount = 1);
 
@@ -71,11 +94,41 @@ public:
 
 	void Update();
 
+    AmbienceId RegisterAmbienceEmitter(const AmbienceEmitterDesc& desc);
+
+    void UnregisterAmbienceEmitter(AmbienceId id);
+
+    void ClearAmbienceEmitters();
+
+    void UpdateAmbience();
 
 private:
 	MaSoundInstance* Internal_GetInstance3D(const std::string& name);
 
 	bool Internal_LoadSoundFromPack(const std::string& name);
+
+    struct AmbienceEmitterInternal
+    {
+        AmbienceEmitterDesc desc;
+        MaSoundInstance* instance{ nullptr };
+        float nextPlayTime{ 0.0f };
+    };
+
+    float ComputeAmbienceVolume(float distance,
+                                float range,
+                                float maxVolumeAreaPercentage) const;
+
+    void UpdateEmitterLoop(AmbienceEmitterInternal& e,
+                           float distance,
+                           float now);
+
+    void UpdateEmitterOnce(AmbienceEmitterInternal& e,
+                           float distance,
+                           float now);
+
+    void UpdateEmitterStep(AmbienceEmitterInternal& e,
+                           float distance,
+                           float now);
 
 private:
 	struct { float x, y, z; } m_CharacterPosition{};
@@ -95,4 +148,7 @@ private:
 	float m_MasterVolume{ 1.0f };
 	float m_MasterVolumeFadeTarget{};
 	float m_MasterVolumeFadeRatePerFrame{};
+
+    std::unordered_map<AmbienceId, AmbienceEmitterInternal> m_AmbienceEmitters;
+    AmbienceId m_NextAmbienceId{ 1 };
 };

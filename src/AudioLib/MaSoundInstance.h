@@ -47,6 +47,7 @@ public:
 
 	void Update();
 
+	void SetLoopCount(int loopCount);
 private:
 	std::string m_Identity;
 	ma_sound m_Sound{};
@@ -54,4 +55,6 @@ private:
 	bool m_Initialized{};
 	float m_FadeTargetVolume{};
 	float m_FadeRatePerFrame{};
+    int m_LoopCount = 0;
+    int m_LoopsRemaining = 0;
 };

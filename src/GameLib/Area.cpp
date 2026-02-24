@@ -102,13 +102,8 @@ void CArea::Update()
 
 void CArea::UpdateAroundAmbience(float fX, float fY, float fZ)
 {
-	// Ambience
-	TAmbienceInstanceVector::iterator i;
-	for (i = m_AmbienceCloneInstanceVector.begin(); i != m_AmbienceCloneInstanceVector.end(); ++i)
-	{
-		TAmbienceInstance * pInstance = *i;
-		pInstance->__Update(fX, fY, fZ);
-	}
+	SoundEngine::Instance().SetListenerPosition(fX, fY, fZ);
+	SoundEngine::Instance().UpdateAmbience();
 }
 
 struct CArea_LessEffectInstancePtrRenderOrder
@@ -630,30 +625,49 @@ void CArea::__SetObjectInstance_SetBuilding(TObjectInstance * pObjectInstance, c
 void CArea::__SetObjectInstance_SetAmbience(TObjectInstance * pObjectInstance, const TObjectData * c_pData, CProperty * pProperty)
 {
 	pObjectInstance->pAmbienceInstance = ms_AmbienceInstancePool.Alloc();
- 	if (!prt::PropertyAmbienceStringToData(pProperty, &pObjectInstance->pAmbienceInstance->AmbienceData))
+ 	TAmbienceInstance* pAmbienceInstance = pObjectInstance->pAmbienceInstance;
+
+	if (!prt::PropertyAmbienceStringToData(pProperty, &pObjectInstance->pAmbienceInstance->AmbienceData))
+	{
+		ms_AmbienceInstancePool.Free(pAmbienceInstance);
+		pObjectInstance->pAmbienceInstance = NULL;
 		return;
+	}
 
 	pObjectInstance->dwType = prt::PROPERTY_TYPE_AMBIENCE;
 
-	TAmbienceInstance * pAmbienceInstance = pObjectInstance->pAmbienceInstance;
 	pAmbienceInstance->fx = c_pData->Position.x;
 	pAmbienceInstance->fy = c_pData->Position.y;
 	pAmbienceInstance->fz = c_pData->Position.z + c_pData->m_fHeightBias;
 	pAmbienceInstance->dwRange = c_pData->dwRange;
 	pAmbienceInstance->fMaxVolumeAreaPercentage = c_pData->fMaxVolumeAreaPercentage;
 
-	if (0 == pAmbienceInstance->AmbienceData.strPlayType.compare("ONCE"))
-	{
-		pAmbienceInstance->Update = &TAmbienceInstance::UpdateOnceSound;
-	}
-	else if (0 == pAmbienceInstance->AmbienceData.strPlayType.compare("STEP"))
-	{
-		pAmbienceInstance->Update = &TAmbienceInstance::UpdateStepSound;
-	}
-	else if (0 == pAmbienceInstance->AmbienceData.strPlayType.compare("LOOP"))
-	{
-		pAmbienceInstance->Update = &TAmbienceInstance::UpdateLoopSound;
-	}
+	// Prepare AmbienceEmitterDesc to send to SoundEngine
+	SoundEngine::AmbienceEmitterDesc desc;
+	if (!pAmbienceInstance->AmbienceData.AmbienceSoundVector.empty())
+		desc.soundName = pAmbienceInstance->AmbienceData.AmbienceSoundVector[0];
+	else
+		desc.soundName.clear();
+
+	desc.x = pAmbienceInstance->fx;
+	desc.y = pAmbienceInstance->fy;
+	desc.z = pAmbienceInstance->fz;
+	desc.range = static_cast<float>(pAmbienceInstance->dwRange);
+	desc.maxVolumeAreaPercentage = pAmbienceInstance->fMaxVolumeAreaPercentage;
+
+	const std::string& playType = pAmbienceInstance->AmbienceData.strPlayType;
+	if (0 == playType.compare("ONCE"))
+		desc.playType = SoundEngine::AmbiencePlayType::Once;
+	else if (0 == playType.compare("STEP"))
+		desc.playType = SoundEngine::AmbiencePlayType::Step;
+	else
+		desc.playType = SoundEngine::AmbiencePlayType::Loop;
+
+	desc.playInterval = pAmbienceInstance->AmbienceData.fPlayInterval;
+	desc.playIntervalVariation = pAmbienceInstance->AmbienceData.fPlayIntervalVariation;
+
+	// Register this AmbienceEmitter in the SoundEngine
+	pAmbienceInstance->ambienceId = SoundEngine::Instance().RegisterAmbienceEmitter(desc);
 }
 
 void CArea::__SetObjectInstance_SetDungeonBlock(TObjectInstance * pObjectInstance, const TObjectData * c_pData, CProperty * pProperty)
@@ -1118,6 +1132,8 @@ void CArea::__Clear_DestroyObjectInstance(TObjectInstance * pObjectInstance)
 
 	if (pObjectInstance->pAmbienceInstance)
 	{
+		SoundEngine::Instance().UnregisterAmbienceEmitter(pObjectInstance->pAmbienceInstance->ambienceId);
+
 		ms_AmbienceInstancePool.Free(pObjectInstance->pAmbienceInstance);
 		pObjectInstance->pAmbienceInstance = NULL;
 	}
@@ -1169,94 +1185,6 @@ CArea::~CArea()
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 
-void CArea::TAmbienceInstance::__Update(float fxCenter, float fyCenter, float fzCenter)
-{
-	if (0 == dwRange)
-		return;
-
-	(this->*Update)(fxCenter, fyCenter, fzCenter);
-}
-
-void CArea::TAmbienceInstance::UpdateOnceSound(float fxCenter, float fyCenter, float fzCenter)
-{
-	float fDistance = sqrtf((fx - fxCenter)*(fx - fxCenter) + (fy - fyCenter)*(fy - fyCenter) + (fz - fzCenter)*(fz - fzCenter));
-	if (uint32_t(fDistance) < dwRange)
-	{
-		if (!playSoundInstance)
-		{
-			if (AmbienceData.AmbienceSoundVector.empty())
-				return;
-
-			const char* c_szFileName = AmbienceData.AmbienceSoundVector[0].c_str();
-			playSoundInstance = SoundEngine::Instance().PlayAmbienceSound3D(fx, fy, fz, c_szFileName);
-		}
-	}
-	else
-	{
-		playSoundInstance = nullptr;
-	}
-}
-
-void CArea::TAmbienceInstance::UpdateStepSound(float fxCenter, float fyCenter, float fzCenter)
-{
-	float fDistance = sqrtf((fx - fxCenter) * (fx - fxCenter) + (fy - fyCenter) * (fy - fyCenter) + (fz - fzCenter) * (fz - fzCenter));
-	if (DWORD(fDistance) < dwRange)
-	{
-		float fcurTime = CTimer::Instance().GetCurrentSecond();
-
-		if (fcurTime > fNextPlayTime)
-		{
-			if (AmbienceData.AmbienceSoundVector.empty())
-				return;
-
-			const char* c_szFileName = AmbienceData.AmbienceSoundVector[0].c_str();
-			playSoundInstance = SoundEngine::Instance().PlayAmbienceSound3D(fx, fy, fz, c_szFileName);
-
-			fNextPlayTime = CTimer::Instance().GetCurrentSecond();
-			fNextPlayTime += AmbienceData.fPlayInterval + frandom(0.0f, AmbienceData.fPlayIntervalVariation);
-		}
-	}
-	else
-	{
-		playSoundInstance = nullptr;
-		fNextPlayTime = 0.0f;
-	}
-}
-
-void CArea::TAmbienceInstance::UpdateLoopSound(float fxCenter, float fyCenter, float fzCenter)
-{
-	float fDistance = sqrtf((fx - fxCenter) * (fx - fxCenter) + (fy - fyCenter) * (fy - fyCenter) + (fz - fzCenter) * (fz - fzCenter));
-	if (uint32_t(fDistance) < dwRange)
-	{
-		if (!playSoundInstance)
-		{
-			if (AmbienceData.AmbienceSoundVector.empty())
-				return;
-
-			const char* c_szFileName = AmbienceData.AmbienceSoundVector[0].c_str();
-			playSoundInstance = SoundEngine::Instance().PlayAmbienceSound3D(fx, fy, fz, c_szFileName, 0);
-		}
-
-		if (playSoundInstance)
-			playSoundInstance->SetVolume(__GetVolumeFromDistance(fDistance));
-	}
-	else
-	{
-		playSoundInstance = nullptr;
-	}
-}
-
-float CArea::TAmbienceInstance::__GetVolumeFromDistance(float fDistance)
-{
-	float fMaxVolumeAreaRadius = float(dwRange) * fMaxVolumeAreaPercentage;
-	if (fMaxVolumeAreaRadius <= 0.0f)
-		return 1.0f;
-	if (fDistance <= fMaxVolumeAreaRadius)
-		return 1.0f;
-
-	return 1.0f - ((fDistance - fMaxVolumeAreaRadius) / (dwRange - fMaxVolumeAreaRadius));
-}
-
 void CArea::TAmbienceInstance::Render()
 {
 	float fBoxSize = 10.0f;
@@ -1294,6 +1222,6 @@ CArea::SAmbienceInstance::SAmbienceInstance()
 	fy = 0.0f;
 	fz = 0.0f;
 	dwRange = 0;
-	playSoundInstance = nullptr;
-	fNextPlayTime = 0.0f;
+	fMaxVolumeAreaPercentage = 0.0f;
+	ambienceId = 0;
 }
