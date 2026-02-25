@@ -83,6 +83,8 @@ void SoundEngine::StopAllSound3D()
 {
 	for (auto& instance : m_Sounds3D)
 		instance.Stop();
+
+    m_PlaySoundHistoryMap.clear();
 }
 
 void SoundEngine::UpdateSoundInstance(float fx, float fy, float fz, uint32_t dwcurFrame, const NSound::TSoundInstanceVector* c_pSoundInstanceVector, bool checkFrequency)
@@ -95,12 +97,13 @@ void SoundEngine::UpdateSoundInstance(float fx, float fy, float fz, uint32_t dwc
 			if (checkFrequency)
 			{
 				float& lastPlay = m_PlaySoundHistoryMap[c_rSoundInstance.strSoundFileName];
-				float diff = CTimer::Instance().GetCurrentSecond() - lastPlay;
+                const float now = CTimer::Instance().GetCurrentSecond();
+				const float diff = now - lastPlay;
 
-				if (CTimer::Instance().GetCurrentSecond() - lastPlay < 0.3f)
-					return;
+                if (diff >= 0.0f && diff < 0.3f)
+                    continue;
 
-				lastPlay = CTimer::Instance().GetCurrentSecond();
+                lastPlay = now;
 			}
 
 			PlaySound3D(c_rSoundInstance.strSoundFileName, fx, fy, fz);
