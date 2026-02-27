@@ -41,6 +41,24 @@ bool SoundEngine::Initialize()
 void SoundEngine::SetSoundVolume(float volume)
 {
 	m_SoundVolume = std::clamp<float>(volume, 0.0, 1.0);
+
+    for (auto& [name, instance] : m_Sounds2D)
+    {
+        if (instance.IsPlaying())
+            instance.SetVolume(m_SoundVolume);
+    }
+
+    for (auto& instance : m_Sounds3D)
+    {
+        if (instance.IsPlaying())
+            instance.SetVolume(m_SoundVolume);
+    }
+
+    for (auto& [id, emitter] : m_AmbienceEmitters)
+    {
+        if (emitter.instance && emitter.instance->IsPlaying())
+            emitter.instance->SetVolume(m_SoundVolume);
+    }
 }
 
 bool SoundEngine::PlaySound2D(const std::string& name)
@@ -55,29 +73,42 @@ bool SoundEngine::PlaySound2D(const std::string& name)
 	return instance.Play();
 }
 
-MaSoundInstance* SoundEngine::PlaySound3D(const std::string& name, float fx, float fy, float fz, bool loop)
+MaSoundInstance* SoundEngine::PlaySound3D(const std::string& name, float fx, float fy, float fz)
 {
     if (auto instance = Internal_GetInstance3D(name))
     {
-        constexpr float minDist = 100.0f;
-        constexpr float maxDist = 5000.0f;
+        constexpr float minDist = 100.0f; // 1m
+        constexpr float maxDist = 5000.0f; // 50m
 
         instance->SetPosition(fx - m_CharacterPosition.x,
                               fy - m_CharacterPosition.y,
                               fz - m_CharacterPosition.z);
         instance->Config3D(true, minDist, maxDist);
         instance->SetVolume(m_SoundVolume);
-        if (loop)
-            instance->Loop();
         instance->Play();
         return instance;
     }
     return nullptr;
 }
 
-MaSoundInstance* SoundEngine::PlayAmbienceSound3D(float fx, float fy, float fz, const std::string& name, bool loop)
+MaSoundInstance* SoundEngine::PlayAmbienceSound3D(const AmbienceEmitterDesc& desc)
 {
-    return PlaySound3D(name, fx, fy, fz, loop);
+    if (auto instance = Internal_GetInstance3D(desc.soundName))
+    {
+        const float minDist = desc.range * desc.maxVolumeAreaPercentage;
+        const float maxDist = desc.range;
+
+        instance->SetPosition(desc.x - m_CharacterPosition.x,
+                              desc.y - m_CharacterPosition.y,
+                              desc.z - m_CharacterPosition.z);
+        instance->Config3D(true, minDist, maxDist);
+        instance->SetVolume(m_SoundVolume);
+        if (desc.playType == AmbiencePlayType::Loop)
+            instance->Loop();
+        instance->Play();
+        return instance;
+    }
+    return nullptr;
 }
 
 void SoundEngine::StopAllSound3D()
@@ -386,8 +417,7 @@ void SoundEngine::UpdateEmitterLoop(AmbienceEmitterInternal& e,
         {
             if (!e.desc.soundName.empty())
             {
-                e.instance = PlayAmbienceSound3D(e.desc.x, e.desc.y, e.desc.z,
-                                                 e.desc.soundName, true);
+                e.instance = PlayAmbienceSound3D(e.desc);
             }
 
             if (!e.instance)
@@ -401,11 +431,6 @@ void SoundEngine::UpdateEmitterLoop(AmbienceEmitterInternal& e,
             e.instance->SetPosition(e.desc.x - m_CharacterPosition.x,
                                     e.desc.y - m_CharacterPosition.y,
                                     e.desc.z - m_CharacterPosition.z);
-
-            float vol = ComputeAmbienceVolume(distance,
-                                              e.desc.range,
-                                              e.desc.maxVolumeAreaPercentage);
-            e.instance->SetVolume(vol * m_SoundVolume);
         }
     }
     else
@@ -430,8 +455,7 @@ void SoundEngine::UpdateEmitterOnce(AmbienceEmitterInternal& e,
         {
             if (!e.desc.soundName.empty())
             {
-                e.instance = PlayAmbienceSound3D(e.desc.x, e.desc.y, e.desc.z,
-                                                 e.desc.soundName, false);
+                e.instance = PlayAmbienceSound3D(e.desc);
             }
         }
     }
@@ -457,8 +481,7 @@ void SoundEngine::UpdateEmitterStep(AmbienceEmitterInternal& e,
         {
             if (!e.desc.soundName.empty())
             {
-                e.instance = PlayAmbienceSound3D(e.desc.x, e.desc.y, e.desc.z,
-                                                 e.desc.soundName, false);
+                e.instance = PlayAmbienceSound3D(e.desc);
             }
 
             float interval = e.desc.playInterval +
