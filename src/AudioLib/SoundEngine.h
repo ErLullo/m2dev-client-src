@@ -63,9 +63,9 @@ public:
 
 	bool PlaySound2D(const std::string& name);
 
-	MaSoundInstance* PlaySound3D(const std::string& name, float fx, float fy, float fz, int loopCount = 1);
+	MaSoundInstance* PlaySound3D(const std::string& name, float fx, float fy, float fz, bool loop = false);
 
-	MaSoundInstance* PlayAmbienceSound3D(float fx, float fy, float fz, const std::string& name, int loopCount = 1);
+	MaSoundInstance* PlayAmbienceSound3D(float fx, float fy, float fz, const std::string& name, bool loop = false);
 
 	void StopAllSound3D();
 

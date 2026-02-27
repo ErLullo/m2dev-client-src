@@ -55,7 +55,7 @@ bool SoundEngine::PlaySound2D(const std::string& name)
 	return instance.Play();
 }
 
-MaSoundInstance* SoundEngine::PlaySound3D(const std::string& name, float fx, float fy, float fz, int loopCount)
+MaSoundInstance* SoundEngine::PlaySound3D(const std::string& name, float fx, float fy, float fz, bool loop)
 {
     if (auto instance = Internal_GetInstance3D(name))
     {
@@ -67,16 +67,17 @@ MaSoundInstance* SoundEngine::PlaySound3D(const std::string& name, float fx, flo
                               fz - m_CharacterPosition.z);
         instance->Config3D(true, minDist, maxDist);
         instance->SetVolume(m_SoundVolume);
-        instance->SetLoopCount(loopCount);
+        if (loop)
+            instance->Loop();
         instance->Play();
         return instance;
     }
     return nullptr;
 }
 
-MaSoundInstance* SoundEngine::PlayAmbienceSound3D(float fx, float fy, float fz, const std::string& name, int loopCount)
+MaSoundInstance* SoundEngine::PlayAmbienceSound3D(float fx, float fy, float fz, const std::string& name, bool loop)
 {
-    return PlaySound3D(name, fx, fy, fz, loopCount);
+    return PlaySound3D(name, fx, fy, fz, loop);
 }
 
 void SoundEngine::StopAllSound3D()
@@ -386,7 +387,7 @@ void SoundEngine::UpdateEmitterLoop(AmbienceEmitterInternal& e,
             if (!e.desc.soundName.empty())
             {
                 e.instance = PlayAmbienceSound3D(e.desc.x, e.desc.y, e.desc.z,
-                                                 e.desc.soundName, 0);
+                                                 e.desc.soundName, true);
             }
 
             if (!e.instance)
@@ -430,7 +431,7 @@ void SoundEngine::UpdateEmitterOnce(AmbienceEmitterInternal& e,
             if (!e.desc.soundName.empty())
             {
                 e.instance = PlayAmbienceSound3D(e.desc.x, e.desc.y, e.desc.z,
-                                                 e.desc.soundName, 1);
+                                                 e.desc.soundName, false);
             }
         }
     }
@@ -457,7 +458,7 @@ void SoundEngine::UpdateEmitterStep(AmbienceEmitterInternal& e,
             if (!e.desc.soundName.empty())
             {
                 e.instance = PlayAmbienceSound3D(e.desc.x, e.desc.y, e.desc.z,
-                                                 e.desc.soundName, 1);
+                                                 e.desc.soundName, false);
             }
 
             float interval = e.desc.playInterval +
