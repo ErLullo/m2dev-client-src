@@ -114,10 +114,6 @@ private:
         float nextPlayTime{ 0.0f };
     };
 
-    float ComputeAmbienceVolume(float distance,
-                                float range,
-                                float maxVolumeAreaPercentage) const;
-
     void UpdateEmitterLoop(AmbienceEmitterInternal& e,
                            float distance,
                            float now);

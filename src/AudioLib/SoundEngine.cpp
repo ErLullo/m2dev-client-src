@@ -333,33 +333,6 @@ void SoundEngine::ClearAmbienceEmitters()
     m_NextAmbienceId = 1;
 }
 
-float SoundEngine::ComputeAmbienceVolume(float distance,
-                                         float range,
-                                         float maxVolumeAreaPercentage) const
-{
-    if (range <= 0.0f)
-        return 1.0f;
-
-    float p = std::clamp(maxVolumeAreaPercentage, 0.0f, 0.999f);
-    float maxRadius = range * p;
-
-    if (maxRadius <= 0.0f)
-        return 1.0f;
-
-    if (distance <= maxRadius)
-        return 1.0f;
-
-    float denom = (range - maxRadius);
-    if (denom <= 0.0f)
-        return 1.0f;
-
-    float t = (distance - maxRadius) / denom;
-    float vol = 1.0f - t;
-    if (vol < 0.0f) vol = 0.0f;
-    if (vol > 1.0f) vol = 1.0f;
-    return vol;
-}
-
 void SoundEngine::UpdateAmbience()
 {
     if (m_AmbienceEmitters.empty())
@@ -451,12 +424,19 @@ void SoundEngine::UpdateEmitterOnce(AmbienceEmitterInternal& e,
 
     if (inside)
     {
-        if (!e.instance || !e.instance->IsPlaying())
+        if (!e.instance)
         {
             if (!e.desc.soundName.empty())
             {
                 e.instance = PlayAmbienceSound3D(e.desc);
             }
+        }
+
+        if (e.instance && e.instance->IsPlaying())
+        {
+            e.instance->SetPosition(e.desc.x - m_CharacterPosition.x,
+                                    e.desc.y - m_CharacterPosition.y,
+                                    e.desc.z - m_CharacterPosition.z);
         }
     }
     else
@@ -487,6 +467,13 @@ void SoundEngine::UpdateEmitterStep(AmbienceEmitterInternal& e,
             float interval = e.desc.playInterval +
                              frandom(0.0f, e.desc.playIntervalVariation);
             e.nextPlayTime = now + interval;
+        }
+
+        if (e.instance && e.instance->IsPlaying())
+        {
+            e.instance->SetPosition(e.desc.x - m_CharacterPosition.x,
+                                    e.desc.y - m_CharacterPosition.y,
+                                    e.desc.z - m_CharacterPosition.z);
         }
     }
     else
