@@ -870,8 +870,8 @@ void CInstanceBase::__Create_SetWarpName(const SCreateData& c_rkCreateData)
 		}
 		else
 		{
-			int iFindingPos = strName.find_first_of(" ", 0);
-			if (iFindingPos > 0)
+			size_t iFindingPos = strName.find(' ');
+			if (iFindingPos > 0 && iFindingPos != std::string::npos)
 			{
 				strName.resize(iFindingPos);
 			}
