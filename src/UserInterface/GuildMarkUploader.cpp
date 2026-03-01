@@ -83,7 +83,7 @@ bool CGuildMarkUploader::__Load(const char* c_szFileName, UINT* peError)
 		const uint8_t B = data[i * 4 + 2];
 		const uint8_t A = data[i * 4 + 3];
 
-		m_kMark.m_apxBuf[i] = (uint32_t(A) << 24) | (uint32_t(R) << 16) | (uint32_t(G) << 8) | uint32_t(B);
+		m_kMark.m_apxBuf[i] = (uint32_t(A) << 24) | (uint32_t(B) << 16) | (uint32_t(G) << 8) | uint32_t(R);
 	}
 
 	stbi_image_free(data);
