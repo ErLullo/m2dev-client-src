@@ -860,33 +860,24 @@ void CInstanceBase::__Create_SetName(const SCreateData& c_rkCreateData)
 
 void CInstanceBase::__Create_SetWarpName(const SCreateData& c_rkCreateData)
 {
-	const char * c_szName;
-	if (CPythonNonPlayer::Instance().GetName(c_rkCreateData.m_dwRace, &c_szName))
+	std::string strName = c_rkCreateData.m_stName;
+
+	if (!strName.empty() && (strName[0] == '.'))
 	{
-		std::string strName = c_szName;
-		if (!strName.empty() && strName[0] == '.')
-		{
-			strName.clear();
-		}
-		else
-		{
-			size_t iFindingPos = strName.find(' ');
-			if (iFindingPos > 0 && iFindingPos != std::string::npos)
-			{
-				strName.resize(iFindingPos);
-			}
-		}
-		SetNameString(strName.c_str(), strName.length());
+		strName.clear();
 	}
 	else
 	{
-		std::string strName = c_rkCreateData.m_stName;
-		if (!strName.empty() && strName[0] == '.')
+		const size_t iFindingPos = strName.find(' ');
+		if ((iFindingPos != std::string::npos) && (iFindingPos > 0))
 		{
-			strName.clear();
+			strName.resize(iFindingPos);
 		}
-		SetNameString(strName.c_str(), strName.length());
+
+		std::replace(strName.begin(), strName.end(), '_', ' ');
 	}
+	
+	SetNameString(strName.c_str(), strName.length());
 }
 
 void CInstanceBase::SetNameString(const char* c_szName, int len)

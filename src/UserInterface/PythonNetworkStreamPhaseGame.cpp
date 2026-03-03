@@ -3985,15 +3985,7 @@ bool CPythonNetworkStream::RecvNPCList()
 		if (!Recv(sizeof(TNPCPosition), &NPCPosition))
 			return false;
 
-		const char* c_szName = nullptr;
-		if (CPythonNonPlayer::Instance().GetName(NPCPosition.dwVnum, &c_szName))
-		{
-			CPythonMiniMap::Instance().RegisterAtlasMark(NPCPosition.bType, c_szName, NPCPosition.x, NPCPosition.y);
-		}
-		else
-		{
-			CPythonMiniMap::Instance().RegisterAtlasMark(NPCPosition.bType, NPCPosition.name, NPCPosition.x, NPCPosition.y);
-		}
+		CPythonMiniMap::Instance().RegisterAtlasMark(NPCPosition.bType, NPCPosition.name, NPCPosition.x, NPCPosition.y);
 	}
 
 	return true;

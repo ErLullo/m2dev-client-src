@@ -723,11 +723,19 @@ void CPythonMiniMap::RegisterAtlasMark(BYTE byType, const char * c_szName, long 
 			break;
 		case CActorInstance::TYPE_WARP:
 			aAtlasMarkInfo.m_byType = TYPE_WARP;
+			if (!aAtlasMarkInfo.m_strText.empty() && aAtlasMarkInfo.m_strText[0] == '.')
 			{
-				int iPos = aAtlasMarkInfo.m_strText.find(" ");
-				if (iPos >= 0)
-					aAtlasMarkInfo.m_strText[iPos]=0;
-				
+				aAtlasMarkInfo.m_strText.clear();
+			}
+			else
+			{
+				const size_t iFindingPos = aAtlasMarkInfo.m_strText.find(' ');
+				if ((iFindingPos != std::string::npos) && (iFindingPos > 0))
+				{
+					aAtlasMarkInfo.m_strText.resize(iFindingPos);
+				}
+
+				std::replace(aAtlasMarkInfo.m_strText.begin(), aAtlasMarkInfo.m_strText.end(), '_', ' ');
 			}
 			m_AtlasWarpInfoVector.push_back(aAtlasMarkInfo);
 			break;
