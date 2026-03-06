@@ -290,17 +290,11 @@ void CPythonNetworkStream::__RecvCharacterAppendPacket(SNetworkActorData * pkNet
 
 		__SetWeaponPower(rkPlayer, pkNetActorData->m_dwWeapon);
 
+		CPythonBackground::Instance().Update(pkNetActorData->m_lCurX, pkNetActorData->m_lCurY, 0.0f);
+
 		if (rkPlayer.NEW_GetMainActorPtr())
 		{
-			CPythonBackground::Instance().Update(pkNetActorData->m_lCurX, pkNetActorData->m_lCurY, 0.0f);
 			CPythonCharacterManager::Instance().Update();
-
-			// NOTE : 사귀 타워일 경우 GOTO 로 이동시에도 맵 이름을 출력하도록 처리
-			{
-				std::string strMapName = CPythonBackground::Instance().GetWarpMapName();
-				if (strMapName == "metin2_map_deviltower1")
-					__ShowMapName(pkNetActorData->m_lCurX, pkNetActorData->m_lCurY);
-			}
 		}
 		else
 		{
