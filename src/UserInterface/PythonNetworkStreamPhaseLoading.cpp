@@ -123,7 +123,7 @@ bool CPythonNetworkStream::RecvMainCharacter()
 	rkPlayer.SetName(pack.szName);
 	rkPlayer.SetMainCharacterIndex(GetMainActorVID());
 
-	if (pack.szBGMName[0] != '\0')
+	//if (pack.szBGMName[0] != '\0')
 	{
 		if (pack.fBGMVol > 0.0f)
 			__SetFieldMusicFileInfo(pack.szBGMName, pack.fBGMVol);
