@@ -70,7 +70,7 @@ void MaSoundInstance::Destroy()
 	}
 	m_Initialized = false;
 	m_Identity = "";
-	m_FadeTargetVolume = 0.0f;
+	m_FadeTargetPercent = 0.0f;
 	m_FadeRatePerFrame = 0.0f;
 }
 
@@ -114,6 +114,11 @@ void MaSoundInstance::SetVolume(float volume)
 	ma_sound_set_volume(&m_Sound, volume);
 }
 
+void MaSoundInstance::SetExternalVolume(float volume)
+{
+	m_ExternalVolume = volume;
+}
+
 void MaSoundInstance::SetPitch(float pitch)
 {
 	ma_sound_set_pitch(&m_Sound, pitch);
@@ -138,20 +143,26 @@ void MaSoundInstance::Config3D(bool toggle, float minDist, float maxDist)
 	ma_sound_set_attenuation_model(&m_Sound, ma_attenuation_model_linear);
 }
 
-void MaSoundInstance::Fade(float toVolume, float secDurationFromMinMax)
+void MaSoundInstance::Fade(float targetPercent, float secDurationFromMinMax)
 {
-	m_FadeTargetVolume = std::clamp<float>(toVolume, 0.0f, 1.0f);
-	if (m_FadeTargetVolume != GetVolume())
-	{
-		const float rate = 1.0f / CS_CLIENT_FPS / secDurationFromMinMax;
-		m_FadeRatePerFrame = GetVolume() > m_FadeTargetVolume ? -rate : rate;
-	}
+    targetPercent = std::clamp(targetPercent, 0.0f, 1.0f);
+    if (secDurationFromMinMax <= 0.0f || targetPercent == m_FadeCurrentPercent)
+    {
+        m_FadeCurrentPercent = targetPercent;
+        SetVolume(m_FadeCurrentPercent * m_ExternalVolume);
+        m_FadeRatePerFrame = 0.0f;
+        return;
+    }
+
+    m_FadeStartPercent = m_FadeCurrentPercent;
+    m_FadeTargetPercent = targetPercent;
+
+    m_FadeRatePerFrame = (m_FadeTargetPercent > m_FadeCurrentPercent ? 1.0f : -1.0f) * (1.0f / CS_CLIENT_FPS / secDurationFromMinMax);
 }
 
 void MaSoundInstance::StopFading()
 {
 	m_FadeRatePerFrame = 0.0f;
-	m_FadeTargetVolume = 0.0f;
 }
 
 bool MaSoundInstance::IsFading() const
@@ -161,17 +172,20 @@ bool MaSoundInstance::IsFading() const
 
 void MaSoundInstance::Update()
 {
-    if (m_FadeRatePerFrame != 0.0f)
-    {
-        float targetVolume = std::clamp<float>(m_FadeTargetVolume, 0.0f, 1.0f);
-        float volume = std::clamp<float>(GetVolume() + m_FadeRatePerFrame, 0.0f, 1.0f);
-        if ((m_FadeRatePerFrame > 0.0f && volume >= targetVolume) || (m_FadeRatePerFrame < 0.0f && volume <= targetVolume))
-        {
-            volume = m_FadeTargetVolume;
-            m_FadeRatePerFrame = 0.0f;
-            if (m_FadeTargetVolume <= 0.0f)
-                ma_sound_stop(&m_Sound);
-        }
-        ma_sound_set_volume(&m_Sound, volume);
-    }
+	if (IsFading())
+	{
+		m_FadeCurrentPercent += m_FadeRatePerFrame;
+
+		if ((m_FadeRatePerFrame > 0.0f && m_FadeCurrentPercent >= m_FadeTargetPercent) ||
+			(m_FadeRatePerFrame < 0.0f && m_FadeCurrentPercent <= m_FadeTargetPercent))
+		{
+			m_FadeCurrentPercent = m_FadeTargetPercent;
+			m_FadeRatePerFrame = 0.0f;
+
+			if (m_FadeTargetPercent <= 0.0f)
+				ma_sound_stop(&m_Sound);
+		}
+	}
+
+    SetVolume(m_FadeCurrentPercent * m_ExternalVolume);
 }

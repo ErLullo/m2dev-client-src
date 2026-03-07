@@ -39,7 +39,7 @@ public:
 
 	void Config3D(bool toggle, float minDist = 100.0f/*1m*/, float maxDist = 4000.0f/*40m*/);
 
-	void Fade(float toVolume, float secDurationFromMinMax);
+	void Fade(float targetPercent, float secDurationFromMinMax);
 
 	void StopFading();
 
@@ -47,11 +47,16 @@ public:
 
 	void Update();
 
+	void SetExternalVolume(float volume);
+
 private:
 	std::string m_Identity;
 	ma_sound m_Sound{};
 	ma_decoder m_Decoder{};
 	bool m_Initialized{};
-	float m_FadeTargetVolume{};
 	float m_FadeRatePerFrame{};
+	float m_ExternalVolume = 0.0f;
+	float m_FadeStartPercent = 1.0f;
+	float m_FadeCurrentPercent = 1.0f;
+	float m_FadeTargetPercent = 1.0f;
 };

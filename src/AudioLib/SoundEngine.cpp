@@ -187,8 +187,9 @@ void SoundEngine::FadeOutAllMusic()
 void SoundEngine::SetMusicVolume(float volume)
 {
 	m_MusicVolume = std::clamp<float>(volume, 0.0f, 1.0f);
-	m_Music[m_CurrentMusicIndex].StopFading();
-	m_Music[m_CurrentMusicIndex].SetVolume(m_MusicVolume);
+
+    for (auto& music : m_Music)
+        music.SetExternalVolume(m_MusicVolume);
 }
 
 float SoundEngine::GetMusicVolume() const
