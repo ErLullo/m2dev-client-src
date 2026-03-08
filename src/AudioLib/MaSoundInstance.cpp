@@ -63,15 +63,17 @@ bool MaSoundInstance::InitFromFile(ma_engine& engine, const std::string& filePat
 
 void MaSoundInstance::Destroy()
 {
+	m_Identity.clear();
 	if (m_Initialized)
 	{
 		ma_sound_uninit(&m_Sound);
 		ma_decoder_uninit(&m_Decoder);
 	}
 	m_Initialized = false;
-	m_Identity = "";
-	m_FadeTargetPercent = 0.0f;
 	m_FadeRatePerFrame = 0.0f;
+	m_BaseVolume = 0.0f;
+	m_FadeCurrentPercent = 1.0f;
+	m_FadeTargetPercent = 1.0f;
 }
 
 bool MaSoundInstance::IsInitialized() const
@@ -109,14 +111,14 @@ float MaSoundInstance::GetVolume() const
 	return ma_sound_get_volume(&m_Sound);
 }
 
-void MaSoundInstance::SetVolume(float volume)
+void MaSoundInstance::SetVolume(float volume, std::optional<float> gain)
 {
-	ma_sound_set_volume(&m_Sound, volume);
-}
+    m_BaseVolume = volume;
 
-void MaSoundInstance::SetExternalVolume(float volume)
-{
-	m_ExternalVolume = volume;
+    if (gain.has_value())
+        m_FadeCurrentPercent = *gain;
+
+    ma_sound_set_volume(&m_Sound, m_BaseVolume * m_FadeCurrentPercent);
 }
 
 void MaSoundInstance::SetPitch(float pitch)
@@ -149,12 +151,11 @@ void MaSoundInstance::Fade(float targetPercent, float secDurationFromMinMax)
     if (secDurationFromMinMax <= 0.0f || targetPercent == m_FadeCurrentPercent)
     {
         m_FadeCurrentPercent = targetPercent;
-        SetVolume(m_FadeCurrentPercent * m_ExternalVolume);
+        ma_sound_set_volume(&m_Sound, m_BaseVolume * m_FadeCurrentPercent);
         m_FadeRatePerFrame = 0.0f;
         return;
     }
 
-    m_FadeStartPercent = m_FadeCurrentPercent;
     m_FadeTargetPercent = targetPercent;
 
     m_FadeRatePerFrame = (m_FadeTargetPercent > m_FadeCurrentPercent ? 1.0f : -1.0f) * (1.0f / CS_CLIENT_FPS / secDurationFromMinMax);
@@ -185,7 +186,7 @@ void MaSoundInstance::Update()
 			if (m_FadeTargetPercent <= 0.0f)
 				ma_sound_stop(&m_Sound);
 		}
-	}
 
-    SetVolume(m_FadeCurrentPercent * m_ExternalVolume);
+		ma_sound_set_volume(&m_Sound, m_BaseVolume * m_FadeCurrentPercent);
+	}
 }

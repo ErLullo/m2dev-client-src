@@ -3,6 +3,7 @@
 #define MA_ENABLE_DSOUND
 #define MA_ENABLE_WINMM
 #include <miniaudio.h>
+#include <optional>
 
 inline constexpr float CS_CLIENT_FPS = 61.0f;
 
@@ -29,7 +30,7 @@ public:
 
 	float GetVolume() const;
 
-	void SetVolume(float volume);
+	void SetVolume(float volume, std::optional<float> gain = std::nullopt);
 
 	void SetPitch(float pitch);
 
@@ -47,16 +48,13 @@ public:
 
 	void Update();
 
-	void SetExternalVolume(float volume);
-
 private:
 	std::string m_Identity;
 	ma_sound m_Sound{};
 	ma_decoder m_Decoder{};
-	bool m_Initialized{};
-	float m_FadeRatePerFrame{};
-	float m_ExternalVolume = 0.0f;
-	float m_FadeStartPercent = 1.0f;
+	bool m_Initialized = false;
+	float m_FadeRatePerFrame = 0.0f;
+	float m_BaseVolume = 0.0f;
 	float m_FadeCurrentPercent = 1.0f;
 	float m_FadeTargetPercent = 1.0f;
 };

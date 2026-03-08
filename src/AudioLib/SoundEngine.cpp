@@ -45,19 +45,19 @@ void SoundEngine::SetSoundVolume(float volume)
     for (auto& [name, instance] : m_Sounds2D)
     {
         if (instance.IsPlaying())
-            instance.SetVolume(m_SoundVolume);
+            instance.SetVolume(m_SoundVolume, 1.0f);
     }
 
     for (auto& instance : m_Sounds3D)
     {
         if (instance.IsPlaying())
-            instance.SetVolume(m_SoundVolume);
+            instance.SetVolume(m_SoundVolume, 1.0f);
     }
 
     for (auto& [id, emitter] : m_AmbienceEmitters)
     {
         if (emitter.instance && emitter.instance->IsPlaying())
-            emitter.instance->SetVolume(m_SoundVolume);
+            emitter.instance->SetVolume(m_SoundVolume, 1.0f);
     }
 }
 
@@ -69,7 +69,7 @@ bool SoundEngine::PlaySound2D(const std::string& name)
 	auto& instance = m_Sounds2D[name]; // 2d sounds are persistent, no need to destroy
 	instance.InitFromBuffer(m_Engine, m_Files[name], name);
 	instance.Config3D(false);
-	instance.SetVolume(m_SoundVolume);
+	instance.SetVolume(m_SoundVolume, 1.0f);
 	return instance.Play();
 }
 
@@ -84,7 +84,7 @@ MaSoundInstance* SoundEngine::PlaySound3D(const std::string& name, float fx, flo
                               fy - m_CharacterPosition.y,
                               fz - m_CharacterPosition.z);
         instance->Config3D(true, minDist, maxDist);
-        instance->SetVolume(m_SoundVolume);
+        instance->SetVolume(m_SoundVolume, 1.0f);
         instance->Play();
         return instance;
     }
@@ -102,7 +102,7 @@ MaSoundInstance* SoundEngine::PlayAmbienceSound3D(const AmbienceEmitterDesc& des
                               desc.y - m_CharacterPosition.y,
                               desc.z - m_CharacterPosition.z);
         instance->Config3D(true, minDist, maxDist);
-        instance->SetVolume(m_SoundVolume);
+        instance->SetVolume(m_SoundVolume, 1.0f);
         if (desc.playType == AmbiencePlayType::Loop)
             instance->Loop();
         instance->Play();
@@ -115,6 +115,9 @@ void SoundEngine::StopAllSound3D()
 {
 	for (auto& instance : m_Sounds3D)
 		instance.Stop();
+
+    for (auto& music : m_Music)
+        music.Stop();
 
     m_PlaySoundHistoryMap.clear();
 }
@@ -151,7 +154,7 @@ bool SoundEngine::FadeInMusic(const std::string& path, float targetVolume /* 1.0
 	auto& fadeOutMusic = m_Music[m_CurrentMusicIndex];
 	if (fadeOutMusic.IsPlaying() && path == fadeOutMusic.GetIdentity())
 	{
-		fadeOutMusic.Fade(targetVolume, fadeInDurationSecondsFromMin);
+		fadeOutMusic.Fade(1.0f, fadeInDurationSecondsFromMin);
 		return fadeOutMusic.Resume();
 	}
 
@@ -164,8 +167,8 @@ bool SoundEngine::FadeInMusic(const std::string& path, float targetVolume /* 1.0
 	music.InitFromFile(m_Engine, path);
 	music.Config3D(false);
 	music.Loop();
-	music.SetVolume(0.0f);
-	music.Fade(targetVolume, fadeInDurationSecondsFromMin);
+	music.SetVolume(m_MusicVolume, 0.0f);
+	music.Fade(1.0f, fadeInDurationSecondsFromMin);
 	return music.Play();
 }
 
@@ -174,7 +177,7 @@ void SoundEngine::FadeOutMusic(const std::string& name, float targetVolume, floa
 	for (auto& music : m_Music)
 	{
 		if (music.GetIdentity() == name)
-			music.Fade(targetVolume, fadeOutDurationSecondsFromMax);
+			music.Fade(0.0f, fadeOutDurationSecondsFromMax);
 	}
 }
 
@@ -189,7 +192,7 @@ void SoundEngine::SetMusicVolume(float volume)
 	m_MusicVolume = std::clamp<float>(volume, 0.0f, 1.0f);
 
     for (auto& music : m_Music)
-        music.SetExternalVolume(m_MusicVolume);
+        music.SetVolume(m_MusicVolume);
 }
 
 float SoundEngine::GetMusicVolume() const
