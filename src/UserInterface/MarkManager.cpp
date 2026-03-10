@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <stdio.h>
 #include "MarkManager.h"
 
 #if _MSC_VER < 1200
@@ -124,9 +125,14 @@ void CGuildMarkManager::SaveMarkImage(DWORD imgIdx)
 {
 	std::string path;
 
-	if (GetMarkImageFilename(imgIdx, path))
-		if (!__GetImage(imgIdx)->Save(path.c_str()))
-			sys_err("%s Save failed\n", path.c_str());
+	if (!GetMarkImageFilename(imgIdx, path))
+		return;
+	
+	CGuildMarkImage* pkImage = __GetImage(imgIdx);
+	if (!pkImage)
+		return;
+	
+	pkImage->Save(path.c_str());
 }
 
 CGuildMarkImage * CGuildMarkManager::__GetImage(DWORD imgIdx)
@@ -156,7 +162,6 @@ bool CGuildMarkManager::AddMarkIDByGuildID(DWORD guildID, DWORD markID)
 	if (markID >= MAX_IMAGE_COUNT * CGuildMarkImage::MARK_TOTAL_COUNT)
 		return false;
 
-	//sys_log(0, "MarkManager: guild_id=%d mark_id=%d", guildID, markID);
 	m_mapGID_MarkID.insert(std::map<DWORD, DWORD>::value_type(guildID, markID));
 	m_setFreeMarkID.erase(markID);
 	return true;
@@ -290,7 +295,7 @@ bool CGuildMarkManager::SaveBlockFromCompressedData(DWORD imgIdx, DWORD posBlock
 	CGuildMarkImage * pkImage = __GetImage(imgIdx);
 
 	if (pkImage)
-		pkImage->SaveBlockFromCompressedData(posBlock, pbBlock, dwSize);
+		return pkImage->SaveBlockFromCompressedData(posBlock, pbBlock, dwSize);
 
 	return false;
 }
@@ -311,6 +316,29 @@ bool CGuildMarkManager::GetBlockCRCList(DWORD imgIdx, uint32_t* crcList)
 		p->GetBlockCRCList(crcList);
 
 	return true;
+}
+
+// CLIENT
+void CGuildMarkManager::ReloadMarkImage(DWORD imgIdx)
+{
+	std::string imagePath;
+	if (!GetMarkImageFilename(imgIdx, imagePath))
+		return;
+
+	std::map<DWORD, CGuildMarkImage*>::iterator it = m_mapIdx_Image.find(imgIdx);
+	if (it != m_mapIdx_Image.end())
+	{
+		// Reload the image from disk
+		it->second->Load(imagePath.c_str());
+		sys_log(0, "ReloadMarkImage: reloaded image data %u from %s", imgIdx, imagePath.c_str());
+	}
+
+	CResource* pResource = CResourceManager::Instance().GetResourcePointer(imagePath.c_str());
+	if (pResource && pResource->IsType(CGraphicImage::Type()))
+	{
+		pResource->Reload();
+		sys_log(0, "ReloadMarkImage: reloaded texture %u from %s", imgIdx, imagePath.c_str());
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -397,92 +425,3 @@ void CGuildMarkManager::UploadSymbol(DWORD guildID, int iSize, const uint8_t* pb
 		rSymbol.crc = GetCRC32(reinterpret_cast<const char*>(pbyData), iSize);
 	}
 }
-
-#ifdef __UNITTEST__
-#include "lzo_manager.h"
-
-Guild::CGuildMarkManager * mgr;
-
-void heartbeat(LPHEART ht, int pulse)
-{
-	return;
-}
-
-void SaveMark(DWORD guildID, const char * filename)
-{
-	ILuint m_uImg;
-
-	ilGenImages(1, &m_uImg);
-	ilBindImage(m_uImg);
-	ilEnable(IL_ORIGIN_SET);
-	ilOriginFunc(IL_ORIGIN_UPPER_LEFT);
-
-	if (ilLoad(IL_TYPE_UNKNOWN, (const ILstring) filename))
-	{
-		ILuint width = ilGetInteger(IL_IMAGE_WIDTH);
-		ILuint height = ilGetInteger(IL_IMAGE_HEIGHT);
-
-		ilConvertImage(IL_BGRA, IL_UNSIGNED_BYTE);
-
-		uint8_t* data = (uint8_t*) malloc(sizeof(DWORD) * width * height);
-		ilCopyPixels(0, 0, 0, width, height, 1, IL_BGRA, IL_UNSIGNED_BYTE, data);
-		ilDeleteImages(1, &m_uImg);
-
-		printf("%s w%u h%u ", filename, width, height);
-		mgr->SaveMark(guildID, data);
-	}
-	else
-		printf("%s cannot open file.\n", filename);
-}
-
-int main(int argc, char **argv)
-{
-	LZOManager lzo;
-	char f[64];
-
-	srandom(time(0));
-
-	ilInit(); // DevIL Initialize
-	thecore_init(25, heartbeat);
-
-	std::vector<int> vec_guild_id;
-
-	for (int i = 1; i < 1281; ++i)
-		vec_guild_id.push_back(i);
-
-	mgr = new CGuildMarkManager;
-	mgr->LoadMarkData(vec_guild_id);
-	/*
-	for (int i = 1401; i < 1500; ++i)
-	{
-		snprintf(f, sizeof(f), "%lu.jpg", (random() % 5) + 1);
-		//SaveMark(i, f);
-		mgr->DeleteMark(i);
-	}
-	*/
-	//snprintf(f, sizeof(f), "%lu.jpg", (random() % 5) + 1);
-	//SaveMark(1, f);
-	DWORD idx_client[CGuildMarkImage::BLOCK_TOTAL_COUNT];
-	DWORD idx_server[CGuildMarkImage::BLOCK_TOTAL_COUNT];
-
-	mgr->GetBlockCRCList(0, idx_client);
-	mgr->GetBlockCRCList(1, idx_server);
-
-	std::map<uint8_t, const SGuildMarkBlock *> mapDiff;
-	mgr->GetDiffBlocks(1, idx_client, mapDiff);
-
-	printf("#1 Diff %u\n", mapDiff.size());
-
-	for (itertype(mapDiff) it = mapDiff.begin(); it != mapDiff.end(); ++it)
-	{
-		printf("Put Block pos %u crc %u\n", it->first, it->second->m_crc);
-		mgr->SaveBlockFromCompressedData(0, it->first, it->second->m_abCompBuf, it->second->m_sizeCompBuf);
-	}
-
-	mgr->GetBlockCRCList(0, idx_client);
-	mgr->GetDiffBlocks(1, idx_client, mapDiff);
-	printf("#2 Diff %u\n", mapDiff.size());
-	delete mgr;
-	return 1;
-}
-#endif

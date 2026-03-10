@@ -925,10 +925,28 @@ void CPythonTextTail::RefreshAllGuildMark()
 	{
 		TTextTail* pTextTail = itor->second;
 
+		CInstanceBase* pInstance = CPythonCharacterManager::Instance().GetInstancePtr(itor->first);
+		if (!pInstance)
+			continue;
+		
+		DWORD dwGuildID = pInstance->GetGuildID();
+		if (dwGuildID == 0)
+			continue;
+
 		if (!pTextTail->pMarkInstance)
 			continue;
 
-		// Re-load the mark instance to get the updated texture
+		DWORD dwMarkID = CGuildMarkManager::Instance().GetMarkID(dwGuildID);
+		if (dwMarkID != CGuildMarkManager::INVALID_MARK_ID)
+		{
+			std::string markImagePath;
+			if (CGuildMarkManager::Instance().GetMarkImageFilename(dwMarkID / CGuildMarkImage::MARK_TOTAL_COUNT, markImagePath))
+			{
+				pTextTail->pMarkInstance->SetImageFileName(markImagePath.c_str());
+				pTextTail->pMarkInstance->SetIndex(dwMarkID % CGuildMarkImage::MARK_TOTAL_COUNT);
+			}
+		}
+		
 		pTextTail->pMarkInstance->Load();
 	}
 

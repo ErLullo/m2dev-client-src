@@ -2,6 +2,7 @@
 #include "PythonNetworkStream.h"
 #include "Packet.h"
 #include "GuildMarkDownloader.h"
+#include "MarkManager.h"
 
 #include "PythonGuild.h"
 #include "PythonCharacterManager.h"
@@ -3602,6 +3603,8 @@ bool CPythonNetworkStream::RecvMarkUpdate()
 		return false;
 
 	Tracef(" >> RecvMarkUpdate: guildID=%u, imgIdx=%u\n", packet.guildID, packet.imgIdx);
+
+	CGuildMarkManager::Instance().ReloadMarkImage(packet.imgIdx);
 
 	// Rate limit mark downloads to prevent connection spam from multiple simultaneous guild uploads
 	// Allow at most one download request per 1 second from server-pushed updates

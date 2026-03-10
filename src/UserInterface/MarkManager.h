@@ -53,6 +53,7 @@ class CGuildMarkManager : public singleton<CGuildMarkManager>
 		// CLIENT
 		bool SaveBlockFromCompressedData(DWORD imgIdx, DWORD idBlock, const uint8_t * pbBlock, DWORD dwSize);
 		bool GetBlockCRCList(DWORD imgIdx, uint32_t * crcList);
+		void ReloadMarkImage(DWORD imgIdx);
 
 	private:
 		// 
