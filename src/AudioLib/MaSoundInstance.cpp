@@ -153,12 +153,17 @@ void MaSoundInstance::Fade(float targetPercent, float secDurationFromMinMax)
         m_FadeCurrentPercent = targetPercent;
         ma_sound_set_volume(&m_Sound, m_BaseVolume * m_FadeCurrentPercent);
         m_FadeRatePerFrame = 0.0f;
+
+		if (m_FadeCurrentPercent <= 0.0f)
+			ma_sound_stop(&m_Sound);
+
         return;
     }
 
     m_FadeTargetPercent = targetPercent;
 
-    m_FadeRatePerFrame = (m_FadeTargetPercent > m_FadeCurrentPercent ? 1.0f : -1.0f) * (1.0f / CS_CLIENT_FPS / secDurationFromMinMax);
+    //m_FadeRatePerFrame = (m_FadeTargetPercent > m_FadeCurrentPercent ? 1.0f : -1.0f) * (1.0f / CS_CLIENT_FPS / secDurationFromMinMax);
+	m_FadeRatePerFrame = (m_FadeTargetPercent - m_FadeCurrentPercent) * (1.0f / CS_CLIENT_FPS / secDurationFromMinMax);
 }
 
 void MaSoundInstance::StopFading()
