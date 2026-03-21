@@ -196,16 +196,19 @@ bool CGrannyModel::LoadMeshs()
 		}
 		m_bHaveBlendThing |= rMesh.HaveBlendThing();
 
-		for (int i = 0; pgrnMesh->PrimaryVertexData->VertexType[i].Name != nullptr; ++i)
+		if (pgrnMesh->PrimaryVertexData && pgrnMesh->PrimaryVertexData->VertexType)
 		{
-			if ( 0 == strcmp(pgrnMesh->PrimaryVertexData->VertexType[i].Name, GrannyVertexPositionName) )
-				m_dwFvF |= D3DFVF_XYZ;
-			else if ( 0 == strcmp(pgrnMesh->PrimaryVertexData->VertexType[i].Name, GrannyVertexNormalName) )
-				m_dwFvF |= D3DFVF_NORMAL;
-			else if ( 0 == strcmp(pgrnMesh->PrimaryVertexData->VertexType[i].Name, GrannyVertexTextureCoordinatesName"0") )
-				m_dwFvF |= D3DFVF_TEX1;
-			else if ( 0 == strcmp(pgrnMesh->PrimaryVertexData->VertexType[i].Name, GrannyVertexTextureCoordinatesName"1") )
-				m_dwFvF |= D3DFVF_TEX2;
+			for (int i = 0; pgrnMesh->PrimaryVertexData->VertexType[i].Name != nullptr; ++i)
+			{
+				if ( 0 == strcmp(pgrnMesh->PrimaryVertexData->VertexType[i].Name, GrannyVertexPositionName) )
+					m_dwFvF |= D3DFVF_XYZ;
+				else if ( 0 == strcmp(pgrnMesh->PrimaryVertexData->VertexType[i].Name, GrannyVertexNormalName) )
+					m_dwFvF |= D3DFVF_NORMAL;
+				else if ( 0 == strcmp(pgrnMesh->PrimaryVertexData->VertexType[i].Name, GrannyVertexTextureCoordinatesName"0") )
+					m_dwFvF |= D3DFVF_TEX1;
+				else if ( 0 == strcmp(pgrnMesh->PrimaryVertexData->VertexType[i].Name, GrannyVertexTextureCoordinatesName"1") )
+					m_dwFvF |= D3DFVF_TEX2;
+			}
 		}
 
 		vtxPos += GrannyGetMeshVertexCount(pgrnMesh);
